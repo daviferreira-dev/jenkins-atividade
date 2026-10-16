@@ -1,0 +1,36 @@
+# Controller + agent Linux. Uso: veja jenkins/agents/README.md
+services:
+  jenkins:
+    build: .
+    image: carparts/jenkins:1.0
+    container_name: jenkins-carparts
+    ports:
+      - "127.0.0.1:8080:8080"     # web só em localhost (acesso remoto via túnel/VPN)
+      - "50000:50000"
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?defina ADMIN_PASSWORD}
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+  agent-linux:
+    profiles: ["agents"]          # só sobe depois de obter o segredo do nó
+    build: ./agents
+    image: carparts/jenkins-agent-linux:1.0
+    container_name: jenkins-agent-linux
+    depends_on: [jenkins]
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_AGENT_NAME: linux-agent
+      JENKINS_SECRET: ${AGENT_SECRET:?defina AGENT_SECRET}
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_AGENT_WORKDIR: /opt/jenkins-agent
+    volumes:
+      # o agent usa o daemon do host para os builds; o caminho do workspace
+      # precisa ser idêntico dentro e fora do contêiner
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/jenkins-agent:/opt/jenkins-agent
+    group_add:
+      - ${DOCKER_GID:-999}
+
+volumes:
+  jenkins_home:

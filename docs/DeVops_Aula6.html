@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevOps · Aula 06 · Jenkins: CI/CD, Pipeline como Código, Docker e Azure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --senai-red:#e3142f; --senai-red-dk:#b40d22; --ink:#16161a; --ink-2:#3b3b44; --muted:#6b6b76;
+  --paper:#f6f3ec; --paper-2:#ede8dc; --card:#fffdf8; --line:#d9d2c3; --line-2:#e7e1d4;
+  --blue:#1f5fbf; --blue-bg:#e8f0fb; --green:#1d7a46; --green-bg:#e5f3ea; --violet:#6a3fb5; --violet-bg:#efe8fa;
+  --amber:#a96400; --amber-bg:#fdf1dc; --danger:#b3261e; --danger-bg:#fbe7e5;
+  --code-bg:#15171c; --code-ink:#e6e6e6;
+  --f-display:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace;
+  --r:10px; --wrap:1080px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 var(--f-text);-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-underline-offset:2px}
+a:hover{color:var(--senai-red)}
+img,svg{max-width:100%}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--paper-2);border:1px solid var(--line-2);padding:.05em .35em;border-radius:4px}
+h1,h2,h3,h4{font-family:var(--f-display);line-height:1.2;margin:0 0 .5em}
+h3{font-size:1.35rem} h4{font-size:1.08rem;font-family:var(--f-text);font-weight:700}
+p{margin:0 0 .9em}
+ul,ol{margin:0 0 1em;padding-left:1.25em}
+li{margin:.2em 0}
+
+/* progresso e trilho */
+#prog{position:fixed;top:0;left:0;height:4px;width:0;background:var(--senai-red);z-index:100;transition:width .1s linear}
+.rail{position:fixed;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:90}
+.rail a{position:relative;display:block;width:11px;height:11px;border-radius:50%;background:var(--line);border:2px solid var(--paper);box-shadow:0 0 0 1px var(--line)}
+.rail a.on{background:var(--senai-red);box-shadow:0 0 0 1px var(--senai-red)}
+.rail a span{position:absolute;right:20px;top:50%;transform:translateY(-50%);white-space:nowrap;background:var(--ink);color:#fff;font-size:.72rem;padding:.15em .55em;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .15s}
+.rail a:hover span{opacity:1}
+@media (max-width:900px){.rail{display:none}}
+
+/* masthead */
+.mast{background:#fff;border-bottom:1px solid var(--line)}
+.mast-in{max-width:var(--wrap);margin:0 auto;padding:18px 20px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.mast .logo{height:46px;width:auto}
+.mast .inst{font-size:.84rem;color:var(--ink-2);line-height:1.35;border-left:2px solid var(--line);padding-left:18px}
+.mast .inst b{color:var(--ink)}
+.subhead{background:var(--ink);color:#fff}
+.subhead-in{max-width:var(--wrap);margin:0 auto;padding:9px 20px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:600 .8rem/1.3 var(--f-mono);letter-spacing:.08em;text-transform:uppercase}
+.subhead .aula{background:var(--senai-red);padding:.15em .6em;border-radius:3px}
+
+/* hero */
+.hero{max-width:var(--wrap);margin:0 auto;padding:46px 20px 26px}
+.kicker{font:600 .78rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--senai-red);margin-bottom:.7em}
+.hero h1{font-size:clamp(2rem,4.6vw,3.3rem);font-weight:700;letter-spacing:-.01em;max-width:26ch}
+.hero .sub{font-size:1.12rem;color:var(--ink-2);max-width:68ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.meta span{font-size:.8rem;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:.25em .8em;color:var(--ink-2)}
+
+/* identificação do aluno */
+.idbar{position:sticky;top:0;z-index:80;background:rgba(246,243,236,.94);backdrop-filter:blur(6px);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.idbar-in{max-width:var(--wrap);margin:0 auto;padding:8px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.idbar label{font:600 .72rem var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.idbar input{font:inherit;font-size:.9rem;padding:.35em .6em;border:1px solid var(--line);border-radius:6px;background:#fff;min-width:0}
+.idbar #alunoNome{flex:1 1 220px}
+.idbar #alunoRA{flex:0 1 140px}
+.idbar .hint{font-size:.78rem;color:var(--muted)}
+
+/* layout de blocos */
+.wrap{max-width:var(--wrap);margin:0 auto;padding:10px 20px 40px}
+.block{padding:54px 0 22px;border-bottom:1px solid var(--line);scroll-margin-top:60px}
+.block-head{display:flex;align-items:baseline;gap:16px;margin-bottom:.35em}
+.block-head .num{font:700 .95rem var(--f-mono);color:#fff;background:var(--senai-red);padding:.2em .55em;border-radius:5px;flex:none}
+.block-head h2{font-size:clamp(1.6rem,3.2vw,2.25rem);margin:0}
+.block-sub{color:var(--muted);font-size:1rem;margin:0 0 1.6em;max-width:75ch}
+.lead{font-size:1.07rem;color:var(--ink-2)}
+
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 1.2em}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 1.2em}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 1.2em}
+.g2>*,.g3>*,.g4>*{min-width:0}
+@media (max-width:860px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 14px;border-top:4px solid var(--line)}
+.card h4{margin:0 0 .4em}
+.card p:last-child,.card ul:last-child{margin-bottom:0}
+.card.accent{border-top-color:var(--senai-red)}
+.card.blue{border-top-color:var(--blue)}
+.card.green{border-top-color:var(--green)}
+.card.violet{border-top-color:var(--violet)}
+.card .tag{font:600 .7rem var(--f-mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.stat b{display:block;font:700 1.75rem/1.1 var(--f-display);color:var(--senai-red)}
+.stat span{font-size:.84rem;color:var(--ink-2)}
+
+.callout{background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:0 var(--r) var(--r) 0;padding:14px 18px;margin:0 0 1.2em}
+.callout p:last-child{margin-bottom:0}
+.callout .ttl{font-weight:700;display:block;margin-bottom:.25em}
+.callout.warn{background:var(--amber-bg);border-left-color:var(--amber)}
+.callout.danger{background:var(--danger-bg);border-left-color:var(--danger)}
+.callout.ok{background:var(--green-bg);border-left-color:var(--green)}
+
+.badge{display:inline-block;font:600 .7rem/1.4 var(--f-mono);padding:.1em .5em;border-radius:4px;background:var(--paper-2);color:var(--ink-2);vertical-align:middle;letter-spacing:.02em}
+.badge.g{background:var(--green-bg);color:var(--green)}
+.badge.b{background:var(--blue-bg);color:var(--blue)}
+.badge.v{background:var(--violet-bg);color:var(--violet)}
+.badge.r{background:var(--danger-bg);color:var(--danger)}
+
+/* fluxo */
+.flow{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 1.3em;counter-reset:st;padding:0;list-style:none}
+.flow .step{flex:1 1 150px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;position:relative;counter-increment:st;margin:0}
+.flow .step::before{content:counter(st,decimal-leading-zero);font:700 .74rem var(--f-mono);color:var(--senai-red);display:block;margin-bottom:.2em}
+.flow .step b{display:block;font-size:.95rem}
+.flow .step span{font-size:.83rem;color:var(--ink-2)}
+
+/* linha do tempo */
+.timeline{list-style:none;margin:0 0 1.4em;padding:0;position:relative}
+.timeline::before{content:"";position:absolute;left:92px;top:4px;bottom:4px;width:2px;background:var(--line)}
+.timeline li{display:grid;grid-template-columns:80px 1fr;gap:26px;margin:0 0 16px;position:relative}
+.timeline li::after{content:"";position:absolute;left:86px;top:7px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--senai-red)}
+.timeline .yr{font:700 1rem var(--f-mono);text-align:right;color:var(--ink)}
+.timeline .ev b{display:block}
+.timeline .ev span{color:var(--ink-2);font-size:.94rem}
+@media (max-width:560px){.timeline::before{left:6px}.timeline li{grid-template-columns:1fr;gap:2px;padding-left:28px}.timeline li::after{left:0}.timeline .yr{text-align:left}}
+
+/* tabelas */
+.tbl-scroll{overflow-x:auto;margin:0 0 1.3em;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+table.data{border-collapse:collapse;width:100%;font-size:.9rem;min-width:620px}
+table.data th{background:var(--ink);color:#fff;text-align:left;font-weight:600;padding:9px 12px;font-size:.82rem;letter-spacing:.02em}
+table.data td{padding:9px 12px;border-top:1px solid var(--line-2);vertical-align:top}
+table.data tr:nth-child(even) td{background:#faf7f0}
+
+/* código */
+.codebox{margin:0 0 1.3em;border-radius:var(--r);overflow:hidden;background:var(--code-bg);border:1px solid #000}
+.codebox .cbar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px 6px 14px;background:#22252c;color:#aab;font:500 .74rem var(--f-mono)}
+.codebox .cp{font:600 .72rem var(--f-mono);background:#353945;color:#fff;border:0;border-radius:4px;padding:.3em .7em;cursor:pointer}
+.codebox .cp:hover{background:var(--senai-red)}
+pre.code{margin:0;padding:14px 16px;overflow-x:auto;color:var(--code-ink);font:13.5px/1.6 var(--f-mono);tab-size:2}
+pre.code code{background:none;border:0;padding:0;border-radius:0;font-size:inherit;color:inherit}
+pre.code .key{color:#ff8f7a;font-weight:600}
+pre.code .str{color:#9ed98a}
+pre.code .cmt{color:#8b93a7;font-style:italic}
+pre.code .var{color:#f3c969}
+
+/* abas */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--ink);margin:0}
+.tabs button{font:600 .85rem var(--f-text);background:var(--paper-2);border:1px solid var(--line);border-bottom:0;border-radius:7px 7px 0 0;padding:.5em 1em;cursor:pointer;color:var(--ink-2)}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tabpanes{margin:0 0 1.4em}
+.tabpane{display:none;padding:18px 0 0}
+.tabpane.on{display:block}
+
+/* diagrama */
+.figure{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:0 0 1.3em;overflow-x:auto}
+.figure svg{display:block;min-width:640px;width:100%;height:auto}
+.figure figcaption{font-size:.82rem;color:var(--muted);margin-top:8px}
+
+/* spoilers */
+details.spoiler{background:var(--card);border:1px dashed var(--line);border-radius:8px;padding:8px 14px;margin:.5em 0 0}
+details.spoiler summary{cursor:pointer;font-weight:600;font-size:.88rem;color:var(--senai-red)}
+details.spoiler[open]{border-style:solid}
+details.spoiler div{padding-top:8px;font-size:.93rem;color:var(--ink-2)}
+
+/* exercícios */
+.ex{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin:0 0 1.2em}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.pills span{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;font:600 .75rem var(--f-mono);background:var(--paper-2);color:var(--muted);border:1px solid var(--line)}
+.pills span.ok{background:var(--green);color:#fff;border-color:var(--green)}
+.pills span.no{background:var(--danger);color:#fff;border-color:var(--danger)}
+.qitem{border-top:1px solid var(--line-2);padding:14px 0 6px}
+.qitem:first-of-type{border-top:0;padding-top:0}
+.qitem .q{font-weight:600;margin-bottom:.55em}
+.qitem .q small{font:600 .72rem var(--f-mono);color:var(--senai-red);margin-right:6px}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:620px){.opts{grid-template-columns:1fr}}
+.opts.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:860px){.opts.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.opts.four{grid-template-columns:1fr}.idbar .hint{display:none}}
+.opts button{font:inherit;font-size:.9rem;text-align:left;background:#fff;border:1px solid var(--line);border-radius:8px;padding:.55em .8em;cursor:pointer;color:var(--ink)}
+.opts button:hover:not(:disabled){border-color:var(--ink)}
+.opts button.sel-ok{background:var(--green-bg);border-color:var(--green);font-weight:600}
+.opts button.sel-no{background:var(--danger-bg);border-color:var(--danger);font-weight:600}
+.opts button.right{border-color:var(--green);border-style:dashed}
+.opts button:disabled{cursor:default}
+.fb{display:none;font-size:.9rem;margin-top:8px;padding:8px 12px;border-radius:6px}
+.fb.show{display:block}
+.fb.ok{background:var(--green-bg);color:#124d2c}
+.fb.no{background:var(--danger-bg);color:#7a1a14}
+.score{font:600 .9rem var(--f-mono);margin-top:10px}
+.btn{font:600 .9rem var(--f-text);background:var(--ink);color:#fff;border:0;border-radius:8px;padding:.65em 1.2em;cursor:pointer}
+.btn:hover:not(:disabled){background:var(--senai-red)}
+.btn:disabled{background:#aaa;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:#fff}
+
+.seqlist{list-style:none;padding:0;margin:0 0 12px}
+.seqlist li{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:0 0 6px}
+.seqlist li .pos{font:700 .78rem var(--f-mono);color:var(--muted);width:24px;flex:none}
+.seqlist li .txt{flex:1;font-size:.92rem}
+.seqlist li .mv{display:flex;gap:4px;flex:none}
+.seqlist li .mv button{width:30px;height:30px;border:1px solid var(--line);background:var(--paper);border-radius:6px;cursor:pointer;font-size:.8rem}
+.seqlist li .mv button:hover{background:var(--ink);color:#fff}
+.seqlist li.good{border-color:var(--green);background:var(--green-bg)}
+.seqlist li.bad{border-color:var(--danger);background:var(--danger-bg)}
+
+.disc textarea,.prat textarea{width:100%;min-height:120px;font:inherit;font-size:.92rem;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;resize:vertical}
+.wc{font:500 .75rem var(--f-mono);color:var(--muted);margin:4px 0 0}
+.wc.ok{color:var(--green)}
+
+.prat .deliv{border-top:1px solid var(--line-2);padding:14px 0}
+.prat .deliv:first-of-type{border-top:0}
+.prat .deliv h4{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.prat .deliv h4 .badge{font-size:.78rem}
+
+.checks{list-style:none;padding:0;margin:0 0 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:620px){.checks{grid-template-columns:1fr}}
+.checks li{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.9rem;margin:0}
+.checks li i{width:20px;height:20px;border-radius:50%;flex:none;background:var(--paper-2);border:2px solid var(--line);font-style:normal;display:grid;place-items:center;font-size:.7rem;color:#fff}
+.checks li.ok i{background:var(--green);border-color:var(--green)}
+.checks li.ok i::before{content:"✓"}
+.finrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#finMsg{font-size:.88rem;color:var(--muted)}
+
+/* rodapé */
+footer.foot{background:var(--ink);color:#d8d8de;margin-top:40px}
+.foot-in{max-width:var(--wrap);margin:0 auto;padding:44px 20px 30px}
+.foot h2{color:#fff;font-size:1.7rem}
+.foot h3{color:#fff;font-size:1.05rem;font-family:var(--f-text);font-weight:700;margin:0 0 .6em;padding-bottom:.35em;border-bottom:2px solid var(--senai-red)}
+.foot a{color:#9cc3ff}
+.foot a:hover{color:#fff}
+.srcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;margin:0 0 30px}
+@media (max-width:860px){.srcs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.srcs{grid-template-columns:1fr}}
+.srcs ul{list-style:none;padding:0;margin:0}
+.srcs li{margin:0 0 .6em;font-size:.86rem;line-height:1.4}
+.srcs li small{display:block;color:#9a9aa6;font-size:.76rem}
+.vids{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 30px}
+@media (max-width:620px){.vids{grid-template-columns:1fr}}
+.vid{display:flex;gap:12px;align-items:flex-start;background:#22232a;border:1px solid #34353f;border-radius:10px;padding:12px 14px;text-decoration:none}
+.vid:hover{border-color:var(--senai-red)}
+.vid .play{flex:none;width:38px;height:38px;border-radius:50%;background:var(--senai-red);display:grid;place-items:center;color:#fff;font-size:.9rem}
+.vid b{display:block;color:#fff;font-size:.9rem;line-height:1.35}
+.vid span{display:block;color:#a8a8b3;font-size:.78rem;margin-top:2px}
+.foot .fine{border-top:1px solid #34353f;padding-top:16px;font-size:.78rem;color:#9a9aa6}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<nav class="rail" aria-label="Seções da aula"><a href="#s1"><span>01 · Visão geral e funcionalidades</span></a><a href="#s2"><span>02 · História</span></a><a href="#s3"><span>03 · Metodologia</span></a><a href="#s4"><span>04 · Instalação</span></a><a href="#s5"><span>05 · Documentação</span></a><a href="#s6"><span>06 · Pipeline</span></a><a href="#s7"><span>07 · Docker</span></a><a href="#s8"><span>08 · Azure</span></a><a href="#s9"><span>09 · Exercício guiado</span></a><a href="#s10"><span>10 · Sequência</span></a><a href="#s11"><span>11 · Quiz</span></a><a href="#s12"><span>12 · Dissertativas</span></a><a href="#s13"><span>13 · Prática Carparts</span></a><a href="#s14"><span>14 · Finalização</span></a></nav>
+<header class="mast"><div class="mast-in">
+  <svg class="logo" viewBox="0 0 260 60" role="img" aria-label="UNISENAI"><rect x="0" y="0" width="260" height="60" rx="4" fill="#e3142f"/><text x="130" y="41" text-anchor="middle" font-family="'Arial Black','Arial Bold',Arial,sans-serif" font-weight="900" font-size="31" letter-spacing="1" fill="#fff">UNISENAI</text></svg>
+  <div class="inst"><b>Faculdade SENAI</b><br>Tecnologia em Análise e Desenvolvimento de Sistemas · 2º semestre<br>Unidade curricular: Integração e Entrega Contínua – DevOps</div>
+</div></header>
+<div class="subhead"><div class="subhead-in"><span><span class="aula">AULA 06</span> &nbsp;Jenkins · CI/CD</span><span>11/09/2026</span></div></div>
+
+<section class="hero">
+  <div class="kicker">Conteúdos 6.1 · 6.2 · 6.3</div>
+  <h1>Jenkins: pipeline como código, do Hudson à nuvem</h1>
+  <p class="sub">Funcionalidades, história e metodologia do servidor de automação open source mais usado em CI/CD; instalação, documentação oficial e Jenkinsfile de projetos reais; e o uso do Jenkins com Docker e na Azure.</p>
+  <div class="meta">
+    <span>6.1 · Fundamentos, história e metodologia</span>
+    <span>6.2 · Instalação, documentação e pipeline</span>
+    <span>6.3 · Jenkins com Docker e Azure</span>
+    <span>Pré-requisito: Aula 02 (WSL 2 + Docker)</span>
+  </div>
+</section>
+
+<div class="idbar"><div class="idbar-in">
+  <label for="alunoNome">Aluno</label><input id="alunoNome" type="text" autocomplete="name" placeholder="Nome completo">
+  <label for="alunoRA">RA</label><input id="alunoRA" type="text" inputmode="numeric" placeholder="Registro acadêmico">
+  <span class="hint">Usados no relatório final</span>
+</div></div>
+
+<main class="wrap">
+<!-- ============ 01 · VISÃO GERAL E FUNCIONALIDADES ============ -->
+<section class="block" id="s1">
+  <div class="block-head"><span class="num">01</span><h2>Visão geral e funcionalidades do Jenkins</h2></div>
+  <p class="block-sub">Conteúdo 6.1 · O que é o Jenkins, o que ele entrega de fábrica, como está organizado por dentro e onde ele se posiciona entre as ferramentas de CI/CD.</p>
+
+  <p class="lead">O <b>Jenkins</b> é um servidor de automação <i>open source</i>, escrito em Java e distribuído sob licença MIT. Ele recebe um evento (um <i>push</i> no Git, um horário agendado, um clique) e executa uma sequência de tarefas: compilar, testar, analisar, empacotar e implantar. O projeto se descreve como “o servidor de automação open source líder” e sustenta esse papel com um ecossistema de mais de 2.000 plugins.</p>
+
+  <div class="g4">
+    <div class="stat"><b>2.000+</b><span>plugins no índice oficial (plugins.jenkins.io)</span></div>
+    <div class="stat"><b>MIT</b><span>licença do núcleo, escrito em Java</span></div>
+    <div class="stat"><b>26,5 mil</b><span>estrelas do repositório jenkinsci/jenkins no GitHub (set/2026)</span></div>
+    <div class="stat"><b>2.568.3</b><span>versão LTS vigente · semanal 2.581 (set/2026)</span></div>
+  </div>
+
+  <h3>Funcionalidades principais</h3>
+  <div class="g3">
+    <div class="card accent"><span class="tag">núcleo</span><h4>Integração e entrega contínuas</h4><p>Dispara builds a cada mudança no repositório, publica relatórios de teste e artefatos e pode seguir até a implantação em homologação e produção.</p></div>
+    <div class="card blue"><span class="tag">pipeline</span><h4>Pipeline como código</h4><p>O processo de entrega fica num <code>Jenkinsfile</code> versionado junto com a aplicação, revisado em pull request como qualquer código.</p></div>
+    <div class="card green"><span class="tag">ecossistema</span><h4>Plugins</h4><p>Integrações com Git, GitHub, Docker, Kubernetes, Maven, npm, SonarQube, Slack, nuvens públicas e ferramentas de teste.</p></div>
+    <div class="card violet"><span class="tag">escala</span><h4>Builds distribuídos</h4><p>Um <i>controller</i> coordena vários <i>agents</i> (Linux, Windows, macOS, contêineres, VMs na nuvem) que executam os jobs em paralelo.</p></div>
+    <div class="card accent"><span class="tag">segurança</span><h4>Credenciais e permissões</h4><p>Cofre de credenciais (senhas, tokens, chaves SSH, certificados) injetadas no build sem aparecer no log; autorização por matriz de permissões.</p></div>
+    <div class="card blue"><span class="tag">operação</span><h4>Configuração como código</h4><p>O plugin <b>JCasC</b> descreve o controller inteiro num arquivo YAML, o que torna a instalação reprodutível e auditável.</p></div>
+  </div>
+
+  <div class="callout">
+    <span class="ttl">Instalação simples, interface web</span>
+    <p>O Jenkins é uma aplicação Java autocontida: roda em Windows, Linux, macOS e outros Unix, em contêiner Docker ou no Kubernetes. A configuração é feita pela interface web, que valida os campos e mostra ajuda contextual (ícone “?”).</p>
+  </div>
+
+  <h3>Tipos de item (job)</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Tipo</th><th>Como é definido</th><th>Quando usar</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td><b>Freestyle project</b></td><td>Formulários na interface web</td><td>Tarefas simples e legadas: um script, um build único</td><td>Configuração fica só no servidor; difícil versionar e revisar</td></tr>
+      <tr><td><b>Pipeline</b></td><td><code>Jenkinsfile</code> (inline ou lido do Git)</td><td>Fluxos com várias etapas, aprovações, paralelismo</td><td>Formato recomendado para CI/CD</td></tr>
+      <tr><td><b>Multibranch Pipeline</b></td><td>Varre um repositório e cria um pipeline por branch e por PR que tenha <code>Jenkinsfile</code></td><td>Equipes com GitFlow, trunk-based ou pull requests</td><td>Branches novas aparecem sozinhas; branches removidas somem</td></tr>
+      <tr><td><b>Organization Folder</b></td><td>Varre uma organização inteira (GitHub, Bitbucket, GitLab)</td><td>Empresas com muitos repositórios</td><td>Cada repositório com <code>Jenkinsfile</code> vira um Multibranch</td></tr>
+      <tr><td><b>Folder</b></td><td>Agrupador</td><td>Separar jobs por time, produto ou ambiente</td><td>Permite credenciais e permissões por pasta</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Arquitetura: controller, nós, agents e executores</h3>
+  <figure class="figure">
+    <svg viewBox="0 0 960 350" role="img" aria-label="Arquitetura distribuída do Jenkins">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b3b44"/></marker>
+      </defs>
+      <style>
+        .bx{fill:#fffdf8;stroke:#b9b1a0;stroke-width:1.5}
+        .bxr{fill:#fff4f5;stroke:#e3142f;stroke-width:2.5}
+        .t1{font:700 15px Inter,Arial,sans-serif;fill:#16161a}
+        .t2{font:400 12.5px Inter,Arial,sans-serif;fill:#3b3b44}
+        .t3{font:600 11px "IBM Plex Mono",Consolas,monospace;fill:#6b6b76}
+        .ln{stroke:#3b3b44;stroke-width:1.6;fill:none}
+      </style>
+      <!-- Repositório -->
+      <rect class="bx" x="20" y="125" width="175" height="105" rx="10"/>
+      <text class="t1" x="36" y="152">Repositório Git</text>
+      <text class="t2" x="36" y="174">GitHub · GitLab · Azure</text>
+      <text class="t2" x="36" y="192">Repos</text>
+      <text class="t3" x="36" y="216">Jenkinsfile</text>
+      <!-- Controller -->
+      <rect class="bxr" x="262" y="80" width="225" height="195" rx="10"/>
+      <text class="t1" x="280" y="108">Controller</text>
+      <text class="t2" x="280" y="134">interface web e API REST</text>
+      <text class="t2" x="280" y="156">fila e agendamento de jobs</text>
+      <text class="t2" x="280" y="178">plugins e credenciais</text>
+      <text class="t2" x="280" y="200">JENKINS_HOME (config e histórico)</text>
+      <text class="t3" x="280" y="258">nó interno: 0 executores</text>
+      <!-- Agents -->
+      <rect class="bx" x="560" y="30" width="185" height="78" rx="10"/>
+      <text class="t1" x="576" y="58">Agent Linux</text>
+      <text class="t2" x="576" y="80">Docker · 2 executores</text>
+      <rect class="bx" x="560" y="138" width="185" height="78" rx="10"/>
+      <text class="t1" x="576" y="166">Agent Windows 11</text>
+      <text class="t2" x="576" y="188">build .NET · 1 executor</text>
+      <rect class="bx" x="560" y="246" width="185" height="78" rx="10"/>
+      <text class="t1" x="576" y="274">Agent efêmero</text>
+      <text class="t2" x="576" y="296">contêiner / VM na Azure</text>
+      <!-- Saídas -->
+      <rect class="bx" x="800" y="70" width="145" height="82" rx="10"/>
+      <text class="t1" x="814" y="98">Registro</text>
+      <text class="t2" x="814" y="120">ACR · Docker Hub</text>
+      <rect class="bx" x="800" y="200" width="145" height="82" rx="10"/>
+      <text class="t1" x="814" y="228">Ambientes</text>
+      <text class="t2" x="814" y="250">homologação ·</text>
+      <text class="t2" x="814" y="266">produção</text>
+      <!-- Setas -->
+      <path class="ln" d="M195,177 L258,177" marker-end="url(#ar)"/>
+      <text class="t3" x="200" y="166">webhook</text>
+      <path class="ln" d="M487,140 C520,120 530,75 556,70" marker-end="url(#ar)"/>
+      <path class="ln" d="M487,177 L556,177" marker-end="url(#ar)"/>
+      <path class="ln" d="M487,215 C520,235 530,280 556,285" marker-end="url(#ar)"/>
+      <text class="t3" x="493" y="200">SSH/TCP</text>
+      <path class="ln" d="M745,69 C770,72 780,100 796,108" marker-end="url(#ar)"/>
+      <path class="ln" d="M745,285 C770,282 780,250 796,244" marker-end="url(#ar)"/>
+      <path class="ln" d="M745,177 C770,177 780,230 796,236" marker-end="url(#ar)"/>
+    </svg>
+    <figcaption>O controller decide o quê, quando e onde; os agents executam. Em produção, o nó interno do controller fica com zero executores.</figcaption>
+  </figure>
+
+  <div class="g2">
+    <div class="card accent"><h4>Controller</h4><p>É o próprio serviço Jenkins, onde ele está instalado: o “cérebro” que decide como, quando e onde executar as tarefas, além de guardar configuração, autorização e histórico.</p></div>
+    <div class="card blue"><h4>Node (nó)</h4><p>Máquina que participa do ambiente Jenkins e é capaz de executar pipelines. O Jenkins monitora espaço em disco, memória e tempo de resposta de cada nó e o coloca offline se passar dos limites.</p></div>
+    <div class="card green"><h4>Agent</h4><p>Processo Java pequeno (um <i>jar</i> de cerca de 170 KB) que se conecta ao controller e executa as tarefas. As ferramentas do build (JDK, Node.js, Docker CLI) ficam instaladas no agent ou num contêiner.</p></div>
+    <div class="card violet"><h4>Executor</h4><p>“Vaga” de execução dentro de um nó, na prática uma <i>thread</i>. O número de executores define quantos stages podem rodar ao mesmo tempo naquele nó.</p></div>
+  </div>
+
+  <div class="callout warn">
+    <span class="ttl">Não rode builds no controller</span>
+    <p>A documentação oficial desaconselha executar tarefas no nó interno (<i>built-in node</i>) por motivos de segurança, desempenho e escalabilidade: um build malicioso ou pesado ali teria acesso ao <code>JENKINS_HOME</code>. Configure <b>0 executores</b> no nó interno e use agents.</p>
+  </div>
+
+  <h3>Linhas de versão</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Linha</th><th>Cadência</th><th>Perfil</th><th>Versão em set/2026</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge g">LTS</span> Long-Term Support</td><td>Uma base escolhida a cada 12 semanas entre as semanais; atualizações de correção e segurança a cada 4 semanas</td><td>Produção, laboratórios de ensino, empresas</td><td><b>2.568.3</b></td></tr>
+      <tr><td><span class="badge b">Weekly</span> Semanal</td><td>Toda semana</td><td>Quem precisa de novidades e aceita mudanças frequentes</td><td><b>2.581</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Jenkins entre as ferramentas de CI/CD</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Aspecto</th><th>Jenkins</th><th>GitHub Actions</th><th>GitLab CI/CD</th><th>Azure Pipelines</th></tr></thead>
+    <tbody>
+      <tr><td>Hospedagem</td><td>Você hospeda (servidor, contêiner, Kubernetes, nuvem)</td><td>SaaS no GitHub; runners hospedados ou próprios</td><td>SaaS ou instalação própria</td><td>SaaS no Azure DevOps ou Azure DevOps Server</td></tr>
+      <tr><td>Definição</td><td><code>Jenkinsfile</code> (DSL em Groovy)</td><td>YAML em <code>.github/workflows</code></td><td>YAML em <code>.gitlab-ci.yml</code></td><td>YAML em <code>azure-pipelines.yml</code></td></tr>
+      <tr><td>Extensão</td><td>Plugins</td><td>Actions do Marketplace</td><td>Templates e componentes CI/CD</td><td>Tasks e extensões</td></tr>
+      <tr><td>Ponto forte</td><td>Independência de fornecedor, flexibilidade total, ambientes isolados (on-premises)</td><td>Integração nativa com o repositório</td><td>Plataforma única do código ao deploy</td><td>Integração com serviços Azure e Boards</td></tr>
+      <tr><td>Cuidado</td><td>Você é responsável por atualizar, proteger e fazer backup do servidor e dos plugins</td><td>Dependência da plataforma GitHub</td><td>Recursos avançados em planos pagos</td><td>Dependência do ecossistema Azure DevOps</td></tr>
+    </tbody>
+  </table></div>
+</section>
+<!-- ============ 02 · HISTÓRIA ============ -->
+<section class="block" id="s2">
+  <div class="block-head"><span class="num">02</span><h2>História: do Hudson ao Jenkins</h2></div>
+  <p class="block-sub">Conteúdo 6.1 · Um projeto que nasceu para resolver um problema pessoal de um programador, virou padrão de mercado e passou por uma disputa de marca que definiu seu modelo de governança.</p>
+
+  <p class="lead">Em 2004, <b>Kohsuke Kawaguchi</b>, programador Java da Sun Microsystems, cansou de receber ligações de colegas dizendo que o código que ele tinha acabado de enviar havia quebrado o build. Em vez de prestar mais atenção manualmente, decidiu escrever um programa que compilasse e testasse tudo automaticamente a cada mudança. Esse programa se chamou <b>Hudson</b>.</p>
+
+  <ul class="timeline">
+    <li><div class="yr">2004</div><div class="ev"><b>Nasce o Hudson na Sun Microsystems</b><span>Kawaguchi cria a ferramenta para automatizar build e integração e parar de “quebrar o build” dos colegas.</span></div></li>
+    <li><div class="yr">2005</div><div class="ev"><b>Primeira versão pública (fevereiro)</b><span>O Hudson ganha espaço como alternativa ao CruiseControl e a outros servidores de build.</span></div></li>
+    <li><div class="yr">2008</div><div class="ev"><b>Duke’s Choice Award (JavaOne, maio)</b><span>Prêmio na categoria Developer Solutions consolida a popularidade do Hudson na comunidade Java.</span></div></li>
+    <li><div class="yr">2010</div><div class="ev"><b>Oracle compra a Sun e surgem os atritos</b><span>A comunidade questiona o controle da infraestrutura do projeto; em dezembro a Oracle pede o registro da marca “Hudson”.</span></div></li>
+    <li><div class="yr">2011</div><div class="ev"><b>A comunidade vota e o projeto vira Jenkins</b><span>Proposta de renomear em 11/01, aprovada por ampla maioria em 29/01. A Oracle anuncia que seguirá com o Hudson (01/02) e a primeira versão com o nome Jenkins sai em 02/02/2011. Kawaguchi recebe o O’Reilly Open Source Award e, no mesmo ano, sua empresa InfraDNA é adquirida pela CloudBees, onde ele depois se torna CTO.</span></div></li>
+    <li><div class="yr">2012</div><div class="ev"><b>Hudson vai para a Eclipse Foundation</b><span>A Oracle doa o Hudson à Eclipse Foundation, enquanto o Jenkins concentra a maior parte dos contribuidores.</span></div></li>
+    <li><div class="yr">2016</div><div class="ev"><b>Jenkins 2 (20 de abril)</b><span>O plugin Pipeline passa a vir por padrão: o processo de entrega agora pode ser escrito como código, numa DSL baseada em Apache Groovy.</span></div></li>
+    <li><div class="yr">2017</div><div class="ev"><b>Hudson declarado obsoleto · Blue Ocean</b><span>Em fevereiro o Hudson é oficialmente aposentado. No Jenkins, o Blue Ocean moderniza a visualização de pipelines (hoje ele não recebe novas funcionalidades).</span></div></li>
+    <li><div class="yr">2018</div><div class="ev"><b>Jenkins X (março)</b><span>Projeto separado voltado a CI/CD nativo em Kubernetes, que depois segue caminho independente.</span></div></li>
+    <li><div class="yr">2019</div><div class="ev"><b>Continuous Delivery Foundation (março)</b><span>O Jenkins é projeto fundador da CDF, sob a Linux Foundation. Em agosto de 2020 alcança o status de projeto graduado.</span></div></li>
+    <li><div class="yr">2024</div><div class="ev"><b>Microsoft encerra o suporte aos plugins Azure (29/02)</b><span>A recomendação passa a ser integrar via Azure CLI; alguns plugins seguem mantidos pela comunidade Jenkins (ver seção 08).</span></div></li>
+    <li><div class="yr">2026</div><div class="ev"><b>Java 21 ou 25 obrigatório</b><span>A partir da LTS 2.555.1 (abril/2026), controller e agents precisam de Java 21 ou 25. Em setembro, a LTS vigente é a 2.568.3.</span></div></li>
+  </ul>
+
+  <h3>Exigência de Java ao longo do tempo</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Java suportado</th><th>A partir da LTS</th><th>A partir da semanal</th></tr></thead>
+    <tbody>
+      <tr><td><b>21 ou 25</b></td><td>2.555.1 (abr/2026)</td><td>2.545 (jan/2026)</td></tr>
+      <tr><td>17, 21 ou 25</td><td>2.541.1 (jan/2026)</td><td>2.534 (out/2025)</td></tr>
+      <tr><td>17 ou 21</td><td>2.479.1 (out/2024)</td><td>2.463 (jun/2024)</td></tr>
+      <tr><td>11, 17 ou 21</td><td>2.426.1 (nov/2023)</td><td>2.419 (ago/2023)</td></tr>
+      <tr><td>8 ou 11</td><td>2.164.1 (mar/2019)</td><td>2.164 (fev/2019)</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:.88rem;color:var(--muted)">A exigência vale para todos os componentes: controller, agents e clientes de linha de comando. A versão de Java usada para <i>compilar o seu projeto</i> pode ser outra, instalada no agent ou no contêiner do build.</p>
+
+  <h3>O que essa história ensina</h3>
+  <div class="g3">
+    <div class="card accent"><h4>Governança comunitária</h4><p>O fork mostrou que um projeto open source pertence, na prática, a quem o mantém. O Jenkins tem hoje governança aberta e documentada.</p></div>
+    <div class="card blue"><h4>Automação nasce da dor</h4><p>O Hudson não surgiu de uma teoria, e sim de um problema real de integração. É o mesmo raciocínio do lead time de 11 dias da Carparts.</p></div>
+    <div class="card green"><h4>Evolução para código</h4><p>Do job configurado por formulário (Freestyle) ao <code>Jenkinsfile</code> versionado: a mesma transição que o mercado fez para “tudo como código”.</p></div>
+  </div>
+</section>
+<!-- ============ 03 · METODOLOGIA ============ -->
+<section class="block" id="s3">
+  <div class="block-head"><span class="num">03</span><h2>Metodologia: CI, CD e pipeline como código</h2></div>
+  <p class="block-sub">Conteúdo 6.1 · O Jenkins é uma ferramenta; a metodologia é da equipe. Aqui ligamos cada prática de integração e entrega contínuas ao recurso do Jenkins que a sustenta.</p>
+
+  <div class="g3">
+    <div class="card accent"><span class="tag">CI</span><h4>Integração Contínua</h4><p>Cada desenvolvedor integra seu trabalho ao tronco principal com frequência (pelo menos diariamente). Cada integração é verificada por um build automatizado com testes, para detectar erros o quanto antes.</p></div>
+    <div class="card blue"><span class="tag">CD</span><h4>Entrega Contínua</h4><p>O software fica <b>sempre pronto</b> para ir à produção. O pipeline leva cada mudança até um ambiente de homologação; a ida para produção é uma decisão de negócio, com um clique.</p></div>
+    <div class="card green"><span class="tag">CD</span><h4>Implantação Contínua</h4><p>Passo além: toda mudança que passa em todos os testes vai para produção <b>automaticamente</b>, sem aprovação manual.</p></div>
+  </div>
+
+  <ol class="flow">
+    <li class="step"><b>Commit</b><span>push ou pull request</span></li>
+    <li class="step"><b>Build</b><span>compilação e dependências</span></li>
+    <li class="step"><b>Testes</b><span>unitários e integração</span></li>
+    <li class="step"><b>Qualidade</b><span>lint, cobertura, segurança</span></li>
+    <li class="step"><b>Artefato</b><span>imagem ou pacote versionado</span></li>
+    <li class="step"><b>Homologação</b><span>deploy e smoke test</span></li>
+    <li class="step"><b>Aprovação</b><span>gate manual (CD)</span></li>
+    <li class="step"><b>Produção</b><span>deploy e monitoramento</span></li>
+  </ol>
+
+  <h3>Práticas de CI e como o Jenkins as apoia</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Prática (Martin Fowler)</th><th>Recurso no Jenkins</th></tr></thead>
+    <tbody>
+      <tr><td>Manter tudo num repositório versionado</td><td>Pipeline lido do SCM (<i>Pipeline script from SCM</i>) e <code>Jenkinsfile</code> na raiz do projeto</td></tr>
+      <tr><td>Automatizar o build</td><td>Stages com <code>sh</code>/<code>bat</code>/<code>powershell</code> chamando Maven, Gradle, npm, dotnet</td></tr>
+      <tr><td>Build que se autotesta</td><td>Passo <code>junit</code> publica os resultados; teste falhando marca o build como <i>UNSTABLE</i> ou <i>FAILURE</i></td></tr>
+      <tr><td>Todo commit gera um build no ambiente de integração</td><td>Webhook do GitHub/GitLab + Multibranch Pipeline (um pipeline por branch e por PR)</td></tr>
+      <tr><td>Corrigir builds quebrados imediatamente</td><td>Bloco <code>post { failure { ... } }</code> notifica por e-mail, Slack ou Teams; status aparece no PR</td></tr>
+      <tr><td>Manter o build rápido</td><td>Diretiva <code>parallel</code>, vários agents, cache de dependências em volume Docker</td></tr>
+      <tr><td>Testar num clone da produção</td><td>Agents em contêiner com a mesma imagem-base da produção (<code>agent { docker { ... } }</code>)</td></tr>
+      <tr><td>Facilitar o acesso ao último entregável</td><td><code>archiveArtifacts</code>, push da imagem para registro com tag do build</td></tr>
+      <tr><td>Todos enxergam o que acontece</td><td>Stage View, Pipeline Graph View, histórico e console de cada execução</td></tr>
+      <tr><td>Automatizar a implantação</td><td>Stages de deploy com <code>when { branch 'main' }</code> e <code>input</code> para aprovação</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Princípios do pipeline como código</h3>
+  <div class="g2">
+    <div class="card accent"><h4>Versionado e revisado</h4><p>O <code>Jenkinsfile</code> passa por pull request. Mudar o processo de entrega deixa rastro, autor e justificativa.</p></div>
+    <div class="card blue"><h4>Construa uma vez, implante muitas</h4><p>O mesmo artefato (por exemplo, a imagem <code>carparts-api:57</code>) é promovido de homologação para produção. Nada é recompilado no meio do caminho.</p></div>
+    <div class="card green"><h4>Falhe cedo</h4><p>Etapas baratas e rápidas (lint, testes unitários) vêm antes das caras (testes de integração, deploy).</p></div>
+    <div class="card violet"><h4>Agentes efêmeros e reprodutíveis</h4><p>Cada build roda num contêiner ou VM limpa. “Na minha máquina funciona” deixa de ser argumento.</p></div>
+    <div class="card accent"><h4>Segredos fora do código</h4><p>Tokens e senhas ficam no cofre de credenciais e entram via <code>credentials()</code> ou <code>withCredentials</code>, mascarados no log.</p></div>
+    <div class="card blue"><h4>Gates explícitos</h4><p>Critérios de qualidade (cobertura mínima, zero vulnerabilidade crítica, aprovação humana) viram etapas do pipeline, e não combinados verbais.</p></div>
+  </div>
+
+  <h3>Como medir se está funcionando: métricas DORA</h3>
+  <p>O programa de pesquisa DORA acompanha hoje <b>cinco</b> métricas de desempenho de entrega, agrupadas em <b>vazão</b> (as três primeiras) e <b>instabilidade</b> (as duas últimas). A pesquisa mostra que velocidade e estabilidade não são opostas: equipes de alto desempenho vão bem nas cinco.</p>
+  <div class="g3">
+    <div class="stat"><b>Lead time</b><span>da mudança: do commit até a implantação em produção (Carparts hoje: 11 dias)</span></div>
+    <div class="stat"><b>Frequência</b><span>de implantação: quantas implantações num período</span></div>
+    <div class="stat"><b>Recuperação</b><span>tempo para se recuperar de uma implantação com falha</span></div>
+    <div class="stat"><b>Falhas</b><span>taxa de mudanças que exigem intervenção imediata após a implantação</span></div>
+    <div class="stat"><b>Retrabalho</b><span>taxa de implantações não planejadas causadas por incidentes em produção</span></div>
+    <div class="stat"><b>Jenkins</b><span>cada execução registra duração, resultado, commit e horário — matéria-prima dessas métricas</span></div>
+  </div>
+
+  <div class="callout ok">
+    <span class="ttl">O Jenkins mede para você</span>
+    <p>Cada execução guarda duração, resultado, autor do commit e horário. Com esse histórico dá para calcular lead time e taxa de falha sem planilhas manuais — é o ponto de partida da atividade prática desta aula.</p>
+  </div>
+</section>
+<!-- ============ 04 · INSTALAÇÃO ============ -->
+<section class="block" id="s4">
+  <div class="block-head"><span class="num">04</span><h2>Instalação: Windows, Linux, WAR e assistente inicial</h2></div>
+  <p class="block-sub">Conteúdo 6.2 · Requisitos, as formas de instalação mais usadas e o que fazer logo depois de subir o servidor. A instalação em Docker, recomendada para o laboratório, está detalhada na seção 07.</p>
+
+  <h3>Requisitos</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Item</th><th>Mínimo</th><th>Recomendado (equipe pequena)</th><th>Observação</th></tr></thead>
+    <tbody>
+      <tr><td>Java</td><td colspan="2"><b>Java 21 ou 25</b> (LTS 2.555.1 em diante)</td><td>Use uma distribuição OpenJDK, como Eclipse Temurin</td></tr>
+      <tr><td>Memória RAM</td><td>256 MB</td><td>4 GB ou mais</td><td>Plugins e builds paralelos aumentam o consumo</td></tr>
+      <tr><td>Disco</td><td>1 GB</td><td>50 GB ou mais</td><td>Em contêiner, reserve pelo menos 10 GB; histórico e artefatos crescem rápido</td></tr>
+      <tr><td>Rede</td><td colspan="2">Porta <b>8080</b> (web) · porta <b>50000</b> (agents inbound)</td><td>Não exponha a 8080 diretamente na internet</td></tr>
+      <tr><td>Navegador</td><td colspan="2">Qualquer navegador moderno</td><td>Chrome, Edge, Firefox, Safari</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tabs" data-tabs="inst">
+    <button class="on" data-pane="inst-win">Windows (MSI)</button>
+    <button data-pane="inst-lin">Ubuntu / Debian</button>
+    <button data-pane="inst-war">WAR (qualquer SO)</button>
+    <button data-pane="inst-dock">Docker (rápido)</button>
+  </div>
+  <div class="tabpanes">
+    <div class="tabpane on" id="inst-win">
+      <ol>
+        <li>Instale o JDK 21 (PowerShell como usuário comum ou administrador).</li>
+        <li>Baixe o instalador <b>.msi</b> da linha LTS em <a href="https://www.jenkins.io/download/" target="_blank" rel="noopener">jenkins.io/download</a>.</li>
+        <li>No assistente: pasta de destino → <b>credenciais do serviço</b> (prefira um usuário local ou de domínio com direito <i>Logon as a service</i>; evite LocalSystem em produção) → porta (<b>8080</b>, use “Test Port”) → caminho do Java → Install.</li>
+        <li>O Jenkins é instalado como <b>serviço do Windows</b>. A senha inicial fica em <code>C:\Program Files\Jenkins\secrets\initialAdminPassword</code> (instalação padrão) e também aparece no <code>jenkins.err.log</code> do diretório do Jenkins.</li>
+      </ol>
+<div class="codebox"><div class="cbar"><span>PowerShell · Windows 11</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="powershell"><code># 1) JDK 21 (Eclipse Temurin) via winget
+winget install EclipseAdoptium.Temurin.21.JDK
+java -version
+
+# 2) Depois de instalar o .msi: conferir e controlar o serviço
+Get-Service jenkins
+Restart-Service jenkins
+
+# 3) Ler a senha inicial (PowerShell como administrador)
+Get-Content "C:\Program Files\Jenkins\secrets\initialAdminPassword"
+
+# 4) Abrir no navegador
+Start-Process "http://localhost:8080"</code></pre></div>
+      <div class="callout"><p>Já tem WSL 2 e Docker Desktop da Aula 02? Para laboratório, a instalação em contêiner (seção 07) evita instalar Java e serviço no Windows e é descartável.</p></div>
+    </div>
+
+    <div class="tabpane" id="inst-lin">
+      <p>Comandos oficiais para a linha <b>LTS</b> em Ubuntu/Debian (válidos para Ubuntu 24.04 e para o WSL 2). A chave do repositório é renovada periodicamente; confira o nome do arquivo <code>.key</code> na página de instalação antes de colar.</p>
+<div class="codebox"><div class="cbar"><span>bash · Ubuntu 24.04 / Debian</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code># 1) Java 21
+sudo apt update
+sudo apt install fontconfig openjdk-21-jre
+java -version
+
+# 2) Repositório LTS do Jenkins
+sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list &gt; /dev/null
+
+# 3) Instalar e iniciar
+sudo apt update
+sudo apt install jenkins
+sudo systemctl enable jenkins
+sudo systemctl start jenkins
+sudo systemctl status jenkins
+
+# 4) Senha inicial
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword</code></pre></div>
+      <p>Para trocar a porta, crie um <i>override</i> do systemd em vez de editar arquivos do pacote:</p>
+<div class="codebox"><div class="cbar"><span>bash · trocar a porta para 8081</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>sudo systemctl edit jenkins
+# no editor, acrescente:
+# [Service]
+# Environment="JENKINS_PORT=8081"
+sudo systemctl restart jenkins</code></pre></div>
+      <p style="font-size:.9rem;color:var(--muted)">Red Hat, Rocky e Fedora usam o repositório <code>https://pkg.jenkins.io/rpm-stable/</code> (LTS) com <code>dnf</code>; os comandos <code>systemctl</code> são os mesmos.</p>
+    </div>
+
+    <div class="tabpane" id="inst-war">
+      <p>O arquivo <code>jenkins.war</code> roda em qualquer sistema com Java 21 ou 25. É ótimo para testar uma versão, mas não cria serviço nem reinicia sozinho.</p>
+<div class="codebox"><div class="cbar"><span>bash ou PowerShell</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code># baixe o jenkins.war da linha LTS em https://www.jenkins.io/download/
+java -jar jenkins.war                  # sobe na porta 8080
+java -jar jenkins.war --httpPort=9090  # porta alternativa
+
+# o JENKINS_HOME padrão é ~/.jenkins (Linux) ou %USERPROFILE%\.jenkins (Windows)</code></pre></div>
+    </div>
+
+    <div class="tabpane" id="inst-dock">
+      <p>Forma mais rápida de ter um Jenkins funcionando, usando a imagem oficial com Java 21 e um volume nomeado para os dados:</p>
+<div class="codebox"><div class="cbar"><span>bash · Docker</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>docker run -d --name jenkins \
+  -p 8080:8080 -p 50000:50000 \
+  --restart=on-failure \
+  -v jenkins_home:/var/jenkins_home \
+  jenkins/jenkins:lts-jdk21
+
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword</code></pre></div>
+      <div class="callout warn"><p>Evite <i>bind mount</i> de uma pasta do host em <code>/var/jenkins_home</code>: o usuário do contêiner (uid 1000) pode não ter permissão. Prefira volume nomeado. A versão completa, com Docker-in-Docker, está na seção 07.</p></div>
+    </div>
+  </div>
+
+  <h3>Assistente de configuração inicial</h3>
+  <ol class="flow">
+    <li class="step"><b>Unlock Jenkins</b><span>cole a senha de <code>initialAdminPassword</code></span></li>
+    <li class="step"><b>Customize</b><span>“Install suggested plugins” ou escolha manual</span></li>
+    <li class="step"><b>Primeiro admin</b><span>usuário, senha, nome e e-mail</span></li>
+    <li class="step"><b>Instance URL</b><span>endereço usado em links e webhooks</span></li>
+    <li class="step"><b>Pronto</b><span>“Start using Jenkins”</span></li>
+  </ol>
+
+  <h3>Checklist pós-instalação</h3>
+  <div class="g2">
+    <div class="card accent"><h4>Segurança</h4><ul>
+      <li>Nó interno com <b>0 executores</b> (<i>Manage Jenkins → Nodes → Built-In Node</i>).</li>
+      <li>Autorização por matriz (plugin <i>Matrix Authorization Strategy</i>); nada de acesso anônimo.</li>
+      <li>HTTPS por proxy reverso (Nginx, Apache, Application Gateway) em vez de expor a 8080.</li>
+      <li>Acompanhar os <i>Security Advisories</i> e atualizar plugins com aviso de vulnerabilidade.</li>
+    </ul></div>
+    <div class="card blue"><h4>Operação</h4><ul>
+      <li>Backup do <code>JENKINS_HOME</code> (jobs, credenciais criptografadas, histórico).</li>
+      <li>Descarte de builds antigos (<code>buildDiscarder</code>) para o disco não encher.</li>
+      <li>Pelo menos um agent configurado antes do primeiro pipeline.</li>
+      <li>Testar a atualização de LTS num ambiente de cópia antes de produção.</li>
+    </ul></div>
+  </div>
+
+  <h3>Problemas comuns</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Sintoma</th><th>Causa provável</th><th>Correção</th></tr></thead>
+    <tbody>
+      <tr><td>Serviço não sobe; log cita versão de classe Java</td><td>Java 17 ou anterior</td><td>Instalar Java 21 ou 25 e apontar o serviço para ele</td></tr>
+      <tr><td><i>Address already in use</i> na 8080</td><td>Outro serviço usando a porta (Tomcat, outro contêiner)</td><td><code>JENKINS_PORT</code> via <code>systemctl edit</code>, <code>--httpPort</code> no WAR ou <code>-p 8081:8080</code> no Docker</td></tr>
+      <tr><td><i>Permission denied</i> em <code>/var/jenkins_home</code></td><td>Bind mount com dono diferente do uid 1000</td><td>Usar volume nomeado ou <code>chown 1000:1000</code> na pasta do host</td></tr>
+      <tr><td>Instalação de plugins falha no assistente</td><td>Proxy corporativo ou sem saída para a internet</td><td>Configurar proxy em <i>Manage Jenkins → System</i> ou pré-instalar com <code>jenkins-plugin-cli</code></td></tr>
+      <tr><td>Agent não conecta</td><td>Porta 50000 bloqueada ou URL da instância errada</td><td>Liberar a porta no firewall/NSG e corrigir <i>Jenkins URL</i></td></tr>
+    </tbody>
+  </table></div>
+</section>
+<!-- ============ 05 · DOCUMENTAÇÃO ============ -->
+<section class="block" id="s5">
+  <div class="block-head"><span class="num">05</span><h2>Documentação oficial: como navegar e consultar</h2></div>
+  <p class="block-sub">Conteúdo 6.2 · Onde está cada informação, que ajuda o próprio Jenkins oferece dentro da interface e um roteiro para resolver dúvidas sem depender de tutoriais desatualizados.</p>
+
+  <h3>Mapa da documentação</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Recurso</th><th>Endereço</th><th>Para que serve</th></tr></thead>
+    <tbody>
+      <tr><td><b>User Handbook</b></td><td><a href="https://www.jenkins.io/doc/book/" target="_blank" rel="noopener">jenkins.io/doc/book</a></td><td>Manual completo: instalação, uso, pipeline, gerenciamento, segurança, escalabilidade</td></tr>
+      <tr><td><b>Pipeline</b></td><td><a href="https://www.jenkins.io/doc/book/pipeline/" target="_blank" rel="noopener">jenkins.io/doc/book/pipeline</a></td><td>Conceitos, Jenkinsfile, Multibranch, Docker, bibliotecas compartilhadas</td></tr>
+      <tr><td><b>Pipeline Syntax</b></td><td><a href="https://www.jenkins.io/doc/book/pipeline/syntax/" target="_blank" rel="noopener">jenkins.io/doc/book/pipeline/syntax</a></td><td>Referência de todas as seções e diretivas declarativas</td></tr>
+      <tr><td><b>Pipeline Steps Reference</b></td><td><a href="https://www.jenkins.io/doc/pipeline/steps/" target="_blank" rel="noopener">jenkins.io/doc/pipeline/steps</a></td><td>Cada passo disponível (<code>sh</code>, <code>junit</code>, <code>withCredentials</code>...) e o plugin que o fornece</td></tr>
+      <tr><td><b>Tutoriais</b></td><td><a href="https://www.jenkins.io/doc/tutorials/" target="_blank" rel="noopener">jenkins.io/doc/tutorials</a></td><td>Passo a passo guiado: Java/Maven, Node.js/React, Python, multibranch</td></tr>
+      <tr><td><b>Índice de plugins</b></td><td><a href="https://plugins.jenkins.io/" target="_blank" rel="noopener">plugins.jenkins.io</a></td><td>Busca, versão, requisitos, instalações, avisos de segurança e changelog de cada plugin</td></tr>
+      <tr><td><b>Changelog LTS e Upgrade Guide</b></td><td><a href="https://www.jenkins.io/changelog-stable/" target="_blank" rel="noopener">jenkins.io/changelog-stable</a></td><td>O que mudou em cada versão e cuidados antes de atualizar</td></tr>
+      <tr><td><b>Security Advisories</b></td><td><a href="https://www.jenkins.io/security/advisories/" target="_blank" rel="noopener">jenkins.io/security/advisories</a></td><td>Vulnerabilidades publicadas no núcleo e nos plugins</td></tr>
+      <tr><td><b>Comunidade</b></td><td><a href="https://community.jenkins.io/" target="_blank" rel="noopener">community.jenkins.io</a></td><td>Fórum oficial de perguntas e respostas</td></tr>
+      <tr><td><b>Código-fonte</b></td><td><a href="https://github.com/jenkinsci/jenkins" target="_blank" rel="noopener">github.com/jenkinsci/jenkins</a></td><td>Núcleo, issues, guia de contribuição (<code>CONTRIBUTING.md</code>)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Documentação dentro do próprio Jenkins</h3>
+  <div class="g3">
+    <div class="card accent"><span class="tag">/pipeline-syntax</span><h4>Snippet Generator</h4><p>Escolha um passo num formulário e o Jenkins gera o trecho de código pronto para o <code>Jenkinsfile</code>, já com os plugins instalados no <i>seu</i> servidor.</p></div>
+    <div class="card blue"><span class="tag">/directive-generator</span><h4>Declarative Directive Generator</h4><p>Gera diretivas declarativas (<code>agent</code>, <code>options</code>, <code>when</code>, <code>triggers</code>, <code>post</code>) a partir de formulários.</p></div>
+    <div class="card green"><span class="tag">/pipeline-syntax/globals</span><h4>Global Variables Reference</h4><p>Lista <code>env</code>, <code>params</code>, <code>currentBuild</code>, <code>scm</code> e as variáveis de ambiente de cada build.</p></div>
+    <div class="card violet"><span class="tag">ícone ?</span><h4>Ajuda contextual</h4><p>Cada campo de configuração tem um “?” que explica o parâmetro sem sair da página.</p></div>
+    <div class="card accent"><span class="tag">/manage/systemInfo</span><h4>System Information</h4><p>Versão do Java, propriedades do sistema, variáveis de ambiente e plugins instalados — primeira coisa a anexar quando se pede ajuda.</p></div>
+    <div class="card blue"><span class="tag">jenkins-cli.jar</span><h4>CLI</h4><p>Baixado em <code>JENKINS_URL/jnlpJars/jenkins-cli.jar</code>; o comando <code>help</code> lista todas as operações disponíveis.</p></div>
+  </div>
+
+<div class="codebox"><div class="cbar"><span>bash · explorando pela CLI</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>curl -O http://localhost:8080/jnlpJars/jenkins-cli.jar
+java -jar jenkins-cli.jar -s http://localhost:8080/ -auth admin:SEU_TOKEN help
+java -jar jenkins-cli.jar -s http://localhost:8080/ -auth admin:SEU_TOKEN list-plugins
+java -jar jenkins-cli.jar -s http://localhost:8080/ -auth admin:SEU_TOKEN declarative-linter &lt; Jenkinsfile</code></pre></div>
+
+  <h3>Roteiro para resolver uma dúvida</h3>
+  <ol class="flow">
+    <li class="step"><b>Versão</b><span>anote a versão do Jenkins e do plugin envolvido</span></li>
+    <li class="step"><b>Handbook</b><span>procure o conceito no User Handbook</span></li>
+    <li class="step"><b>Referência</b><span>Syntax e Steps Reference para o código exato</span></li>
+    <li class="step"><b>Plugin</b><span>página do plugin: requisitos, avisos e issues</span></li>
+    <li class="step"><b>Changelog</b><span>houve mudança de comportamento na atualização?</span></li>
+    <li class="step"><b>Comunidade</b><span>pergunte no fórum com o System Information</span></li>
+  </ol>
+
+  <h3>Como ler a página de um plugin</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Campo</th><th>O que verificar</th><th>Exemplo (set/2026)</th></tr></thead>
+    <tbody>
+      <tr><td>Version / Released</td><td>Plugin mantido recentemente?</td><td>Azure Credentials 426.v5627e6a_4c7a_7, lançado há cerca de 2 meses</td></tr>
+      <tr><td>Requires Jenkins</td><td>Versão mínima do núcleo</td><td>Azure Credentials exige Jenkins 2.555.3</td></tr>
+      <tr><td>Installs</td><td>Adoção pela comunidade</td><td>Blue Ocean: 20% dos controllers</td></tr>
+      <tr><td>Avisos (deprecated, security)</td><td>Plugin congelado ou com falha conhecida?</td><td>Blue Ocean não recebe novas funcionalidades; alternativas: Pipeline Graph View e Stage View</td></tr>
+      <tr><td>Maintainers</td><td>Quem mantém</td><td>Plugins Azure: comunidade Jenkins, sem suporte da Microsoft desde 29/02/2024</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">
+    <span class="ttl">Documentação de terceiros envelhece</span>
+    <p>O quickstart da Microsoft para Jenkins numa VM ainda usa <code>openjdk-17-jre</code> e a chave de repositório de 2023. Com o Jenkins atual (Java 21 ou 25), esse roteiro falha se copiado ao pé da letra. Regra da aula: <b>a fonte primária é jenkins.io</b>; tutoriais e vídeos servem para entender o fluxo.</p>
+  </div>
+</section>
+<!-- ============ 06 · PIPELINE ============ -->
+<section class="block" id="s6">
+  <div class="block-head"><span class="num">06</span><h2>Pipeline de projetos: Jenkinsfile para CI/CD</h2></div>
+  <p class="block-sub">Conteúdo 6.2 · Pipeline é um conjunto de plugins que permite modelar a entrega contínua como código. Aqui estão os conceitos, as duas sintaxes, as diretivas e um Jenkinsfile completo de CI/CD.</p>
+
+  <p class="lead">Um <b>Jenkinsfile</b> é um arquivo de texto, salvo na raiz do repositório, que descreve o pipeline. Por estar no controle de versão, ele cria uma trilha de auditoria do processo de entrega e é revisado como qualquer código.</p>
+
+  <div class="g4">
+    <div class="card accent"><span class="tag">pipeline</span><h4>Pipeline</h4><p>Modelo definido pelo usuário do processo de CD: build, teste, entrega.</p></div>
+    <div class="card blue"><span class="tag">agent / node</span><h4>Agent</h4><p>Onde o pipeline (ou um stage) roda: aloca executor e workspace.</p></div>
+    <div class="card green"><span class="tag">stage</span><h4>Stage</h4><p>Subconjunto distinto de tarefas: “Build”, “Test”, “Deploy”. Aparece como coluna na visualização.</p></div>
+    <div class="card violet"><span class="tag">step</span><h4>Step</h4><p>Uma única tarefa: <code>sh 'make'</code>, <code>junit '...'</code>, <code>input</code>.</p></div>
+  </div>
+
+  <h3>Declarativo × Scripted</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Aspecto</th><th>Declarativo</th><th>Scripted</th></tr></thead>
+    <tbody>
+      <tr><td>Bloco raiz</td><td><code>pipeline { ... }</code></td><td><code>node { ... }</code></td></tr>
+      <tr><td>Estilo</td><td>Estrutura fixa e legível: <code>agent</code>, <code>stages</code>, <code>steps</code>, <code>post</code></td><td>Groovy livre: laços, <code>try/catch</code>, funções</td></tr>
+      <tr><td>Validação</td><td>Erros de sintaxe detectados antes de rodar (linter)</td><td>Erros aparecem durante a execução</td></tr>
+      <tr><td>Recomendação</td><td><span class="badge g">padrão para novos projetos</span></td><td><span class="badge v">casos avançados</span>; trechos podem entrar num <code>script { }</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tabs" data-tabs="syn">
+    <button class="on" data-pane="syn-decl">Declarativo (exemplo oficial)</button>
+    <button data-pane="syn-scr">Scripted</button>
+  </div>
+  <div class="tabpanes">
+    <div class="tabpane on" id="syn-decl">
+<div class="codebox"><div class="cbar"><span>Jenkinsfile · declarativo (jenkins.io/doc/book/pipeline)</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>pipeline {
+    agent any
+    options {
+        skipStagesAfterUnstable()
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'make'
+            }
+        }
+        stage('Test'){
+            steps {
+                sh 'make check'
+                junit 'reports/**/*.xml'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'make publish'
+            }
+        }
+    }
+}</code></pre></div>
+    </div>
+    <div class="tabpane" id="syn-scr">
+<div class="codebox"><div class="cbar"><span>Jenkinsfile · scripted</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>node('linux') {
+    stage('Checkout') {
+        checkout scm
+    }
+    stage('Build') {
+        sh 'npm ci &amp;&amp; npm run build'
+    }
+    stage('Test') {
+        try {
+            sh 'npm test'
+        } finally {
+            junit 'reports/*.xml'   // publica mesmo se o teste falhar
+        }
+    }
+}</code></pre></div>
+    </div>
+  </div>
+
+  <h3>Diretivas declarativas essenciais</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Diretiva</th><th>Função</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td><code>agent</code></td><td>Onde executar: <code>any</code>, <code>none</code>, <code>label</code>, <code>docker</code>, <code>dockerfile</code>, <code>kubernetes</code></td><td><code>agent { label 'linux &amp;&amp; docker' }</code></td></tr>
+      <tr><td><code>stages</code> / <code>steps</code></td><td>Sequência de etapas e passos de cada etapa</td><td><code>stage('Test') { steps { sh 'npm test' } }</code></td></tr>
+      <tr><td><code>post</code></td><td>Ações após o pipeline ou stage: <code>always</code>, <code>success</code>, <code>failure</code>, <code>unstable</code>, <code>changed</code>, <code>fixed</code>, <code>regression</code>, <code>aborted</code>, <code>cleanup</code></td><td><code>post { always { junit 'reports/*.xml' } }</code></td></tr>
+      <tr><td><code>environment</code></td><td>Variáveis de ambiente; <code>credentials()</code> injeta segredos</td><td><code>TOKEN = credentials('sonar-token')</code></td></tr>
+      <tr><td><code>options</code></td><td>Configurações do pipeline</td><td><code>timeout(time: 30, unit: 'MINUTES')</code>, <code>retry(2)</code>, <code>buildDiscarder(...)</code></td></tr>
+      <tr><td><code>parameters</code></td><td>Entradas do usuário ao disparar</td><td><code>choice(name: 'AMBIENTE', choices: ['hml','prd'])</code></td></tr>
+      <tr><td><code>triggers</code></td><td>Disparos automáticos: <code>cron</code>, <code>pollSCM</code>, <code>upstream</code></td><td><code>cron('H 2 * * 1-5')</code></td></tr>
+      <tr><td><code>tools</code></td><td>Instala e coloca no PATH ferramentas configuradas</td><td><code>tools { jdk 'jdk21'; maven 'maven3' }</code></td></tr>
+      <tr><td><code>when</code></td><td>Executa o stage só se a condição for verdadeira</td><td><code>when { branch 'main' }</code></td></tr>
+      <tr><td><code>input</code></td><td>Pausa e pede aprovação humana</td><td><code>input message: 'Publicar em produção?'</code></td></tr>
+      <tr><td><code>parallel</code> / <code>matrix</code></td><td>Stages simultâneos; combinações de eixos (SO × versão)</td><td><code>parallel { stage('Lint'){...} stage('Unit'){...} }</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="g3">
+    <div class="card accent"><h4>Code</h4><p>Versionado no Git, revisado e auditável.</p></div>
+    <div class="card blue"><h4>Durable e Pausable</h4><p>Sobrevive a reinícios planejados e não planejados do controller; pode esperar uma aprovação humana.</p></div>
+    <div class="card green"><h4>Versatile e Extensible</h4><p>Suporta fluxos com bifurcações, laços e paralelismo; pode ser estendido por plugins e <i>Shared Libraries</i>.</p></div>
+  </div>
+
+  <h3>Jenkinsfile completo de CI/CD: Carparts API</h3>
+  <p>Projeto Node.js com Dockerfile. O pipeline roda num <b>Multibranch Pipeline</b>: em qualquer branch ou PR executa a parte de CI; na <code>main</code> publica a imagem, implanta em homologação, pede aprovação e implanta em produção.</p>
+  <ol class="flow">
+    <li class="step"><b>Qualidade</b><span>npm ci, lint e testes em contêiner Node</span></li>
+    <li class="step"><b>Imagem</b><span>docker build com tag do build</span></li>
+    <li class="step"><b>Publicação</b><span>push para o registro (só main)</span></li>
+    <li class="step"><b>Homologação</b><span>deploy + smoke test</span></li>
+    <li class="step"><b>Aprovação</b><span>input, sem prender executor</span></li>
+    <li class="step"><b>Produção</b><span>mesma imagem, promovida</span></li>
+  </ol>
+<div class="codebox"><div class="cbar"><span>Jenkinsfile · carparts-api</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>pipeline {
+    agent none                                  // cada stage escolhe seu agent
+
+    options {
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        APP      = 'carparts-api'
+        REGISTRY = 'carpartsacr.azurecr.io'
+        TAG      = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Qualidade') {
+            agent { docker { image 'node:22-alpine' } }
+            environment { npm_config_cache = "${env.WORKSPACE}/.npm" }
+            steps {
+                sh 'npm ci'
+                sh 'npm run lint'
+                sh 'npm test'                   // gera reports/junit.xml
+            }
+            post {
+                always { junit allowEmptyResults: true, testResults: 'reports/*.xml' }
+            }
+        }
+
+        stage('Imagem e publicação') {
+            agent { label 'linux &amp;&amp; docker' }
+            steps {
+                sh 'docker build -t $REGISTRY/$APP:$TAG .'
+                script {
+                    if (env.BRANCH_NAME == 'main') {
+                        docker.withRegistry("https://${REGISTRY}", 'acr-credenciais') {
+                            docker.image("${REGISTRY}/${APP}:${TAG}").push()
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy homologação') {
+            when { branch 'main' }
+            agent { label 'linux' }
+            steps {
+                sh './scripts/deploy.sh homologacao $TAG'
+                sh 'curl --fail --retry 5 --retry-delay 10 https://hml.carparts.example/health'
+            }
+        }
+
+        stage('Aprovação') {
+            when { branch 'main' }
+            steps {                              // sem agent: não ocupa executor esperando
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: "Publicar ${APP}:${TAG} em produção?", ok: 'Aprovar'
+                }
+            }
+        }
+
+        stage('Deploy produção') {
+            when { branch 'main' }
+            agent { label 'linux' }
+            steps {
+                sh './scripts/deploy.sh producao $TAG'
+            }
+        }
+    }
+
+    post {
+        success { echo "Entrega de ${APP}:${TAG} concluída." }
+        failure {
+            mail to: 'devops@carparts.example',
+                 subject: "Falhou: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Detalhes em ${env.BUILD_URL}"
+        }
+    }
+}</code></pre></div>
+
+  <div class="callout">
+    <span class="ttl">Por que aspas simples em <code>sh '... $TAG'</code>?</span>
+    <p>Com aspas simples, quem expande <code>$TAG</code> é o shell do agent, a partir da variável de ambiente. Com aspas duplas, o Groovy interpola antes. Para <b>segredos</b>, use sempre aspas simples: a interpolação Groovy pode vazar a senha no log e na linha de comando do processo.</p>
+  </div>
+
+  <h3>Multibranch + webhook: disparo a cada push</h3>
+  <ol>
+    <li>No Jenkins: <i>New Item → Multibranch Pipeline</i> → <i>Branch Sources: GitHub</i> → credencial (token do GitHub) → URL do repositório → <i>Script Path</i>: <code>Jenkinsfile</code>.</li>
+    <li>No GitHub: <i>Settings → Webhooks → Add webhook</i> → Payload URL <code>https://jenkins.carparts.example/github-webhook/</code> → eventos de push e pull request.</li>
+    <li>Cada branch e cada PR com Jenkinsfile vira um pipeline; o resultado aparece como <i>check</i> no pull request.</li>
+    <li>Sem URL pública (laboratório local)? Use <code>triggers { pollSCM('H/5 * * * *') }</code> temporariamente.</li>
+  </ol>
+
+  <div class="callout ok">
+    <span class="ttl">Reaproveitamento entre projetos</span>
+    <p>Quando vários repositórios repetem os mesmos stages, extraia-os para uma <b>Shared Library</b> (repositório Git com funções Groovy) e carregue com <code>@Library('carparts-lib') _</code> no topo do Jenkinsfile.</p>
+  </div>
+</section>
+<!-- ============ 07 · DOCKER ============ -->
+<section class="block" id="s7">
+  <div class="block-head"><span class="num">07</span><h2>Jenkins e Docker</h2></div>
+  <p class="block-sub">Conteúdo 6.3 · Três relações diferentes entre Jenkins e Docker: o Jenkins rodando em contêiner, contêineres como ambiente de build e o Jenkins construindo e publicando imagens.</p>
+
+  <div class="g3">
+    <div class="card accent"><span class="tag">1 · hospedagem</span><h4>Jenkins em contêiner</h4><p>Controller na imagem oficial <code>jenkins/jenkins:lts-jdk21</code>, dados num volume. Sobe em minutos, é fácil de atualizar e de descartar.</p></div>
+    <div class="card blue"><span class="tag">2 · ambiente de build</span><h4>Agent Docker</h4><p><code>agent { docker { image 'node:22-alpine' } }</code>: cada build roda num contêiner limpo com as ferramentas certas, sem instalar nada no agent.</p></div>
+    <div class="card green"><span class="tag">3 · entregável</span><h4>Build e push de imagens</h4><p><code>docker.build(...)</code> e <code>docker.withRegistry(...)</code> geram a imagem da aplicação e a publicam no registro.</p></div>
+  </div>
+
+  <h3>Laboratório oficial: Jenkins + Docker-in-Docker</h3>
+  <p>O tutorial de instalação do jenkins.io usa dois contêineres na mesma rede: o Jenkins (com o Docker CLI instalado) e um <b>docker:dind</b> que executa os comandos Docker dos pipelines, protegido por TLS.</p>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Componente</th><th>Papel</th></tr></thead>
+    <tbody>
+      <tr><td>Rede <code>jenkins</code></td><td>Bridge que liga os dois contêineres; o dind recebe o alias <code>docker</code></td></tr>
+      <tr><td>Contêiner <code>jenkins-docker</code> (docker:dind)</td><td>Daemon Docker isolado, porta 2376 com TLS; precisa de <code>--privileged</code></td></tr>
+      <tr><td>Contêiner <code>jenkins-blueocean</code></td><td>Controller Jenkins, aponta <code>DOCKER_HOST=tcp://docker:2376</code></td></tr>
+      <tr><td>Volume <code>jenkins-data</code></td><td><code>JENKINS_HOME</code>: jobs, credenciais, histórico</td></tr>
+      <tr><td>Volume <code>jenkins-docker-certs</code></td><td>Certificados TLS do cliente, somente leitura no Jenkins</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tabs" data-tabs="dind">
+    <button class="on" data-pane="dind-lin">Linux · macOS · WSL 2</button>
+    <button data-pane="dind-win">Windows (cmd)</button>
+    <button data-pane="dind-img">Dockerfile da imagem</button>
+  </div>
+  <div class="tabpanes">
+    <div class="tabpane on" id="dind-lin">
+<div class="codebox"><div class="cbar"><span>bash · passo a passo (jenkins.io/doc/book/installing/docker)</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code># 1) rede
+docker network create jenkins
+
+# 2) Docker-in-Docker
+docker run \
+  --name jenkins-docker \
+  --rm \
+  --detach \
+  --privileged \
+  --network jenkins \
+  --network-alias docker \
+  --env DOCKER_TLS_CERTDIR=/certs \
+  --volume jenkins-docker-certs:/certs/client \
+  --volume jenkins-data:/var/jenkins_home \
+  --publish 2376:2376 \
+  docker:dind \
+  --storage-driver overlay2
+
+# 3) construir a imagem do Jenkins (Dockerfile na aba ao lado)
+docker build -t myjenkins-blueocean:2.568.3-1 .
+
+# 4) subir o Jenkins
+docker run \
+  --name jenkins-blueocean \
+  --restart=on-failure \
+  --detach \
+  --network jenkins \
+  --env DOCKER_HOST=tcp://docker:2376 \
+  --env DOCKER_CERT_PATH=/certs/client \
+  --env DOCKER_TLS_VERIFY=1 \
+  --publish 8080:8080 \
+  --publish 50000:50000 \
+  --volume jenkins-data:/var/jenkins_home \
+  --volume jenkins-docker-certs:/certs/client:ro \
+  myjenkins-blueocean:2.568.3-1
+
+# 5) senha inicial
+docker exec jenkins-blueocean cat /var/jenkins_home/secrets/initialAdminPassword</code></pre></div>
+    </div>
+    <div class="tabpane" id="dind-win">
+      <p>No <b>Prompt de Comando</b>, a quebra de linha é <code>^</code>. No PowerShell, use o acento grave <code>`</code> ou deixe o comando numa linha só.</p>
+<div class="codebox"><div class="cbar"><span>cmd · Windows</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bat"><code>docker network create jenkins
+
+docker run --name jenkins-docker --rm --detach ^
+  --privileged --network jenkins --network-alias docker ^
+  --env DOCKER_TLS_CERTDIR=/certs ^
+  --volume jenkins-docker-certs:/certs/client ^
+  --volume jenkins-data:/var/jenkins_home ^
+  --publish 2376:2376 ^
+  docker:dind
+
+docker build -t myjenkins-blueocean:2.568.3-1 .
+
+docker run --name jenkins-blueocean --restart=on-failure --detach ^
+  --network jenkins --env DOCKER_HOST=tcp://docker:2376 ^
+  --env DOCKER_CERT_PATH=/certs/client --env DOCKER_TLS_VERIFY=1 ^
+  --volume jenkins-data:/var/jenkins_home ^
+  --volume jenkins-docker-certs:/certs/client:ro ^
+  --publish 8080:8080 --publish 50000:50000 myjenkins-blueocean:2.568.3-1
+
+docker exec jenkins-blueocean cat /var/jenkins_home/secrets/initialAdminPassword</code></pre></div>
+    </div>
+    <div class="tabpane" id="dind-img">
+<div class="codebox"><div class="cbar"><span>Dockerfile · imagem do Jenkins com Docker CLI</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="dockerfile"><code>FROM jenkins/jenkins:2.568.3-jdk21
+USER root
+RUN apt-get update &amp;&amp; apt-get install -y lsb-release ca-certificates curl &amp;&amp; \
+    install -m 0755 -d /etc/apt/keyrings &amp;&amp; \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc &amp;&amp; \
+    chmod a+r /etc/apt/keyrings/docker.asc &amp;&amp; \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+    https://download.docker.com/linux/debian $(. /etc/os-release &amp;&amp; echo \"$VERSION_CODENAME\") stable" \
+    | tee /etc/apt/sources.list.d/docker.list &gt; /dev/null &amp;&amp; \
+    apt-get update &amp;&amp; apt-get install -y docker-ce-cli &amp;&amp; \
+    apt-get clean &amp;&amp; rm -rf /var/lib/apt/lists/*
+USER jenkins
+RUN jenkins-plugin-cli --plugins "blueocean docker-workflow json-path-api"</code></pre></div>
+      <div class="callout warn"><p>O tutorial oficial ainda instala o <b>Blue Ocean</b>, que não recebe novas funcionalidades. Em projetos novos, troque por <code>pipeline-graph-view</code> na lista de plugins.</p></div>
+    </div>
+  </div>
+
+  <h3>Jenkins reprodutível: plugins + JCasC na imagem</h3>
+  <p>Em vez de clicar no assistente, a Carparts pode versionar o controller inteiro: lista de plugins, configuração em YAML e Dockerfile. Subir um Jenkins novo vira <code>docker build</code> + <code>docker run</code>.</p>
+  <div class="tabs" data-tabs="casc">
+    <button class="on" data-pane="casc-plug">plugins.txt</button>
+    <button data-pane="casc-yaml">casc.yaml</button>
+    <button data-pane="casc-df">Dockerfile e execução</button>
+  </div>
+  <div class="tabpanes">
+    <div class="tabpane on" id="casc-plug">
+<div class="codebox"><div class="cbar"><span>plugins.txt</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="text"><code>configuration-as-code
+workflow-aggregator
+git
+github-branch-source
+docker-workflow
+pipeline-graph-view
+credentials-binding
+matrix-auth
+ws-cleanup</code></pre></div>
+    </div>
+    <div class="tabpane" id="casc-yaml">
+<div class="codebox"><div class="cbar"><span>casc.yaml · Jenkins Configuration as Code</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="yaml"><code>jenkins:
+  systemMessage: "Jenkins Carparts — configurado por código (JCasC)"
+  numExecutors: 0                 # nada roda no controller
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+unclassified:
+  location:
+    url: "http://localhost:8080/"</code></pre></div>
+    </div>
+    <div class="tabpane" id="casc-df">
+<div class="codebox"><div class="cbar"><span>Dockerfile · carparts/jenkins</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="dockerfile"><code>FROM jenkins/jenkins:lts-jdk21
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/ref/casc.yaml
+COPY --chown=jenkins:jenkins plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
+COPY --chown=jenkins:jenkins casc.yaml /usr/share/jenkins/ref/casc.yaml</code></pre></div>
+<div class="codebox"><div class="cbar"><span>bash · construir e subir</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>docker build -t carparts/jenkins:1.0 .
+docker run -d --name jenkins-carparts \
+  -p 8080:8080 -p 50000:50000 \
+  -e ADMIN_PASSWORD='troque-esta-senha' \
+  -v jenkins_home:/var/jenkins_home \
+  carparts/jenkins:1.0</code></pre></div>
+      <p style="font-size:.9rem;color:var(--muted)">Passar a senha por variável de ambiente é aceitável em laboratório. Em produção, use secrets do Docker/Kubernetes ou um cofre (Azure Key Vault).</p>
+    </div>
+  </div>
+
+  <h3>Docker dentro do pipeline</h3>
+  <div class="g2">
+    <div>
+<div class="codebox"><div class="cbar"><span>agent docker · exemplo oficial</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>pipeline {
+    agent {
+        docker { image 'node:24.21.0-alpine3.24' }
+    }
+    stages {
+        stage('Test') {
+            steps {
+                sh 'node --eval "console.log(process.platform,process.env.CI)"'
+            }
+        }
+    }
+}</code></pre></div>
+    </div>
+    <div>
+<div class="codebox"><div class="cbar"><span>cache de dependências com volume</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>pipeline {
+    agent {
+        docker {
+            image 'maven:3.9.9-eclipse-temurin-21'
+            args '-v $HOME/.m2:/root/.m2'
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -B'
+            }
+        }
+    }
+}</code></pre></div>
+    </div>
+  </div>
+<div class="codebox"><div class="cbar"><span>build e push de imagem (scripted, dentro de script { } no declarativo)</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>node {
+    checkout scm
+    docker.withRegistry('https://registry.example.com', 'credentials-id') {
+        def customImage = docker.build("my-image:${env.BUILD_ID}")
+        customImage.push()
+        customImage.push('latest')
+    }
+}</code></pre></div>
+
+  <div class="callout danger">
+    <span class="ttl">Cuidado com <code>/var/run/docker.sock</code></span>
+    <p>Montar o socket do Docker do host dentro do contêiner do Jenkins é um atalho comum em tutoriais, mas dá ao Jenkins (e a qualquer pipeline) controle de <b>root</b> sobre o host. Prefira o dind com TLS do tutorial oficial ou agents separados do controller.</p>
+  </div>
+
+  <h3>Operação do Jenkins em contêiner</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Tarefa / sintoma</th><th>Como resolver</th></tr></thead>
+    <tbody>
+      <tr><td>Atualizar a LTS</td><td>Trocar a tag da imagem, <code>docker build</code> e recriar o contêiner; o volume preserva os dados</td></tr>
+      <tr><td>Backup do volume</td><td><code>docker run --rm -v jenkins_home:/data -v "$PWD":/backup alpine tar czf /backup/jenkins_home.tgz -C /data .</code></td></tr>
+      <tr><td><i>docker: not found</i> no pipeline</td><td>A imagem do agent (ou do controller) não tem o Docker CLI: use o Dockerfile do tutorial</td></tr>
+      <tr><td><i>permission denied</i> no npm dentro do <code>agent docker</code></td><td>O contêiner roda com o uid do Jenkins; aponte o cache para o workspace (<code>npm_config_cache</code>)</td></tr>
+      <tr><td>Agents inbound não conectam</td><td>Publicar a porta 50000 (<code>-p 50000:50000</code>)</td></tr>
+      <tr><td>Logs do controller</td><td><code>docker logs -f jenkins-blueocean</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+<!-- ============ 08 · AZURE ============ -->
+<section class="block" id="s8">
+  <div class="block-head"><span class="num">08</span><h2>Jenkins e Azure</h2></div>
+  <p class="block-sub">Conteúdo 6.3 · Onde hospedar o Jenkins na Azure, como escalar agents e como implantar aplicações em serviços Azure a partir de um pipeline — com a mudança de 2024 que tirou os plugins oficiais de cena.</p>
+
+  <div class="callout danger">
+    <span class="ttl">Plugins Jenkins para Azure: fim do suporte da Microsoft em 29/02/2024</span>
+    <p>A Microsoft aposentou os plugins que mantinha (App Service, Functions, Storage, Container Agents, VM Agents, VM Scale Set, Credentials, Entra ID, entre outros). A recomendação oficial passou a ser: <b>“use a Azure CLI para integrar o Jenkins aos serviços Azure”</b>. Alguns plugins, como <i>Azure Credentials</i> e <i>Azure VM Agents</i>, seguem publicados e mantidos pela comunidade Jenkins, sem suporte da Microsoft. Tutoriais anteriores a 2024 que dependem desses plugins devem ser lidos com cautela.</p>
+  </div>
+
+  <h3>Cenários de uso</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Cenário</th><th>Serviços Azure</th><th>Quando faz sentido</th><th>Atenção</th></tr></thead>
+    <tbody>
+      <tr><td><b>A · Controller numa VM Linux</b></td><td>Virtual Machines, NSG, Disco gerenciado</td><td>Primeiro Jenkins na nuvem; equipes pequenas</td><td>Você cuida de patches, backup e HTTPS</td></tr>
+      <tr><td><b>B · Controller em contêiner numa VM</b></td><td>VM + Docker (seção 07)</td><td>Mesma receita do laboratório local, reprodutível</td><td>Volume em disco gerenciado; snapshot para backup</td></tr>
+      <tr><td><b>C · Jenkins no AKS</b></td><td>Azure Kubernetes Service, Helm</td><td>Muitos times; agents como pods sob demanda</td><td>Exige domínio de Kubernetes; custo do cluster</td></tr>
+      <tr><td><b>D · Agents elásticos</b></td><td>VMs e VM Scale Sets</td><td>Picos de build; agents Windows e Linux</td><td>Plugin VM Agents é mantido pela comunidade</td></tr>
+      <tr><td><b>E · Deploy de aplicações</b></td><td>ACR, App Service, Container Apps, AKS, Functions</td><td>Jenkins (local ou na nuvem) publicando na Azure</td><td>Integração via Azure CLI com service principal</td></tr>
+      <tr><td><b>F · Híbrido com Azure DevOps</b></td><td>Azure Pipelines, Boards, Repos</td><td>Empresa migrando aos poucos ou com Jenkins legado</td><td>Dois sistemas para manter; defina qual é a fonte da verdade</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="tabs" data-tabs="az">
+    <button class="on" data-pane="az-vm">Lab A · VM Linux</button>
+    <button data-pane="az-aks">Lab C · AKS + Helm</button>
+    <button data-pane="az-sp">Lab E · Service principal</button>
+    <button data-pane="az-pipe">Lab E · Pipeline de deploy</button>
+  </div>
+  <div class="tabpanes">
+    <div class="tabpane on" id="az-vm">
+      <p>Adaptação do quickstart do Microsoft Learn para o Jenkins atual: Ubuntu 24.04, Java 21 e a chave de repositório vigente. Execute no <b>Azure Cloud Shell</b> (bash) ou na Azure CLI local.</p>
+<div class="codebox"><div class="cbar"><span>cloud-init-jenkins.txt</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="yaml"><code>#cloud-config
+package_upgrade: true
+packages:
+  - fontconfig
+  - openjdk-21-jre
+runcmd:
+  - mkdir -p /etc/apt/keyrings
+  - wget -O /etc/apt/keyrings/jenkins-keyring.asc https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+  - echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" &gt; /etc/apt/sources.list.d/jenkins.list
+  - apt-get update
+  - apt-get install -y jenkins
+  - systemctl enable --now jenkins</code></pre></div>
+<div class="codebox"><div class="cbar"><span>Azure CLI · criar a VM</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>az group create --name rg-jenkins --location brazilsouth
+
+az vm create \
+  --resource-group rg-jenkins \
+  --name vm-jenkins \
+  --image Ubuntu2404 \
+  --size Standard_B2s \
+  --admin-username azureuser \
+  --generate-ssh-keys \
+  --public-ip-sku Standard \
+  --custom-data cloud-init-jenkins.txt
+
+# IP público
+az vm show --resource-group rg-jenkins --name vm-jenkins -d \
+  --query publicIps --output tsv
+
+# Opção segura: túnel SSH, sem abrir a 8080 na internet
+ssh -L 8080:localhost:8080 azureuser@&lt;IP_PUBLICO&gt;
+#   depois acesse http://localhost:8080 no seu navegador
+
+# senha inicial (dentro da VM)
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword</code></pre></div>
+      <div class="callout warn"><p>O quickstart original abre a porta com <code>az vm open-port --port 8080</code>, o que expõe o Jenkins a qualquer IP. Se precisar abrir, restrinja a origem numa regra de NSG ao IP do laboratório e coloque HTTPS na frente. No fim da aula, desaloque a VM (<code>az vm deallocate</code>) ou apague o grupo (<code>az group delete --name rg-jenkins --yes --no-wait</code>).</p></div>
+    </div>
+
+    <div class="tabpane" id="az-aks">
+      <p>O chart Helm oficial do Jenkins instala o controller como <i>StatefulSet</i> e já configura o plugin Kubernetes para criar agents como pods sob demanda.</p>
+<div class="codebox"><div class="cbar"><span>Azure CLI + Helm + kubectl</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>az group create --name rg-jenkins-aks --location brazilsouth
+az aks create --resource-group rg-jenkins-aks --name aks-jenkins \
+  --node-count 2 --generate-ssh-keys
+az aks get-credentials --resource-group rg-jenkins-aks --name aks-jenkins
+
+kubectl create namespace jenkins
+helm repo add jenkinsci https://charts.jenkins.io
+helm repo update
+helm install jenkins -n jenkins jenkinsci/jenkins
+
+# senha do usuário admin
+kubectl get secret -n jenkins jenkins \
+  -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode
+
+# acesso local
+kubectl -n jenkins port-forward svc/jenkins 8080:8080</code></pre></div>
+      <p style="font-size:.9rem;color:var(--muted)">Para personalizar plugins, recursos e persistência, o guia oficial usa um arquivo <code>jenkins-values.yaml</code> (<code>helm install ... -f jenkins-values.yaml</code>).</p>
+    </div>
+
+    <div class="tabpane" id="az-sp">
+      <p>O pipeline precisa de uma identidade para agir na Azure. Crie um <b>service principal</b> com o menor escopo possível (só o grupo de recursos da aplicação):</p>
+<div class="codebox"><div class="cbar"><span>Azure CLI · identidade do Jenkins</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="bash"><code>az ad sp create-for-rbac \
+  --name sp-jenkins-carparts \
+  --role Contributor \
+  --scopes /subscriptions/&lt;ID_ASSINATURA&gt;/resourceGroups/rg-carparts
+
+# saída (guarde com cuidado — mostrada uma única vez):
+# {
+#   "appId":    "...",   -&gt; usuário
+#   "password": "...",   -&gt; senha
+#   "tenant":   "..."    -&gt; tenant
+# }</code></pre></div>
+      <ol>
+        <li>No Jenkins: <i>Manage Jenkins → Credentials → Add Credentials</i>.</li>
+        <li>Tipo <b>Username with password</b>: usuário = <code>appId</code>, senha = <code>password</code>, ID = <code>azure-sp</code> (mesmo formato usado no tutorial do Microsoft Learn).</li>
+        <li>Tipo <b>Secret text</b>: valor = <code>tenant</code>, ID = <code>azure-tenant-id</code>.</li>
+        <li>Nunca coloque esses valores no <code>Jenkinsfile</code> nem no repositório.</li>
+      </ol>
+      <div class="callout"><p>Com o Jenkins rodando numa VM ou no AKS, dá para trocar o service principal por <b>identidade gerenciada</b> (<code>az login --identity</code>), eliminando a senha.</p></div>
+    </div>
+
+    <div class="tabpane" id="az-pipe">
+      <p>Pipeline que usa só a Azure CLI: login com o service principal, build da imagem no <b>Azure Container Registry</b> e atualização de um Web App for Containers de homologação. O agent precisa ter a Azure CLI instalada.</p>
+<div class="codebox"><div class="cbar"><span>Jenkinsfile · deploy na Azure via Azure CLI</span><button class="cp" type="button">copiar</button></div><pre class="code" data-lang="groovy"><code>pipeline {
+    agent { label 'linux &amp;&amp; azure-cli' }
+
+    environment {
+        RG              = 'rg-carparts'
+        ACR             = 'carpartsacr'
+        WEBAPP          = 'carparts-api-hml'
+        IMAGE           = "carparts-api:${env.BUILD_NUMBER}"
+        AZURE_TENANT_ID = credentials('azure-tenant-id')
+    }
+
+    stages {
+        stage('Login na Azure') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'azure-sp',
+                        usernameVariable: 'AZURE_CLIENT_ID',
+                        passwordVariable: 'AZURE_CLIENT_SECRET')]) {
+                    sh 'az login --service-principal --username "$AZURE_CLIENT_ID" --password "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID" --output none'
+                }
+            }
+        }
+
+        stage('Build da imagem no ACR') {
+            steps {
+                sh 'az acr build --registry "$ACR" --image "$IMAGE" .'
+            }
+        }
+
+        stage('Deploy homologação') {
+            steps {
+                sh '''
+                    az webapp config container set \
+                      --resource-group "$RG" --name "$WEBAPP" \
+                      --container-image-name "$ACR.azurecr.io/$IMAGE" \
+                      --container-registry-url "https://$ACR.azurecr.io"
+                    az webapp restart --resource-group "$RG" --name "$WEBAPP"
+                '''
+            }
+        }
+
+        stage('Smoke test') {
+            steps {
+                sh 'curl --fail --retry 5 --retry-delay 15 "https://$WEBAPP.azurewebsites.net/health"'
+            }
+        }
+    }
+
+    post {
+        always { sh 'az logout || true' }
+    }
+}</code></pre></div>
+      <div class="callout warn"><p>Dois pré-requisitos do lado Azure: o Web App precisa de permissão <b>AcrPull</b> no registro (identidade gerenciada do app) e a assinatura precisa permitir <b>ACR Tasks</b> para o <code>az acr build</code>. Se ACR Tasks não estiver disponível, troque o stage por <code>az acr login --name "$ACR"</code> + <code>docker build</code> + <code>docker push</code>. Para <b>Azure Container Apps</b>, o deploy equivalente é <code>az containerapp update --name ... --resource-group ... --image ...</code>.</p></div>
+    </div>
+  </div>
+
+  <h3>Jenkins na Azure × Azure Pipelines</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Aspecto</th><th>Jenkins hospedado na Azure</th><th>Azure Pipelines</th></tr></thead>
+    <tbody>
+      <tr><td>Quem opera o servidor</td><td>A equipe (VM, contêiner ou AKS)</td><td>Microsoft (agents hospedados) ou a equipe (agents self-hosted)</td></tr>
+      <tr><td>Definição do pipeline</td><td><code>Jenkinsfile</code> (Groovy)</td><td><code>azure-pipelines.yml</code> (YAML)</td></tr>
+      <tr><td>Integração com Azure</td><td>Azure CLI + credenciais no Jenkins</td><td><i>Service connections</i> e tasks nativas</td></tr>
+      <tr><td>Portabilidade</td><td>Alta: o mesmo Jenkinsfile roda on-premises ou em outra nuvem</td><td>Ligada ao Azure DevOps</td></tr>
+      <tr><td>Custo principal</td><td>Infraestrutura (VM, disco, AKS) e horas de manutenção</td><td>Jobs paralelos e agents conforme o plano</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Boas práticas de nuvem para o laboratório</h3>
+  <div class="g3">
+    <div class="card accent"><h4>Custo</h4><p>Use tamanhos pequenos (B-series), desaloque VMs fora do horário, crie alertas de orçamento e apague grupos de recursos de teste.</p></div>
+    <div class="card blue"><h4>Rede e acesso</h4><p>Nada de 8080 aberta para <code>0.0.0.0/0</code>. Túnel SSH, Bastion ou proxy HTTPS com IP restrito.</p></div>
+    <div class="card green"><h4>Identidade</h4><p>Service principal com escopo no grupo de recursos, ou identidade gerenciada. Segredos só no cofre do Jenkins ou no Key Vault.</p></div>
+  </div>
+</section>
+<!-- ============ 09 · EXERCÍCIO GUIADO ============ -->
+<section class="block" id="s9">
+  <div class="block-head"><span class="num">09</span><h2>Exercício guiado: quem faz o quê?</h2></div>
+  <p class="block-sub">Classifique cada situação no componente do Jenkins responsável: <b>Controller</b>, <b>Agent / nó</b>, <b>Plugin</b> ou <b>Jenkinsfile</b>. O feedback aparece a cada resposta.</p>
+  <div class="ex">
+    <div class="pills" id="dgPills"></div>
+    <div id="dgList"></div>
+    <div class="score" id="dgScore">Respondidas: 0/10 · Acertos: 0</div>
+    <p style="margin:10px 0 0"><button class="btn ghost" type="button" id="dgReset">Refazer exercício</button></p>
+  </div>
+</section>
+
+<!-- ============ 10 · SEQUÊNCIA ============ -->
+<section class="block" id="s10">
+  <div class="block-head"><span class="num">10</span><h2>Montagem: a esteira da Carparts do push à produção</h2></div>
+  <p class="block-sub">Use as setas para ordenar as 9 etapas de um pipeline Multibranch que publica na Azure. Depois clique em “Verificar ordem”. Etapas no lugar certo ficam verdes.</p>
+  <div class="ex">
+    <ul class="seqlist" id="seqList"></ul>
+    <div class="finrow">
+      <button class="btn" type="button" id="seqCheck">Verificar ordem</button>
+      <button class="btn ghost" type="button" id="seqShuffle">Embaralhar de novo</button>
+    </div>
+    <div class="fb" id="seqFb"></div>
+  </div>
+</section>
+
+<!-- ============ 11 · QUIZ ============ -->
+<section class="block" id="s11">
+  <div class="block-head"><span class="num">11</span><h2>Quiz: Jenkins, pipeline, Docker e Azure</h2></div>
+  <p class="block-sub">12 questões de múltipla escolha. Cada resposta é definitiva e vem com a explicação.</p>
+  <div class="ex">
+    <div class="pills" id="qzPills"></div>
+    <div id="qzList"></div>
+    <div class="score" id="qzScore">Respondidas: 0/12 · Acertos: 0</div>
+  </div>
+</section>
+
+<!-- ============ 12 · DISSERTATIVAS ============ -->
+<section class="block" id="s12">
+  <div class="block-head"><span class="num">12</span><h2>Questões dissertativas</h2></div>
+  <p class="block-sub">Responda com suas palavras, em pelo menos 40 palavras cada. Consulte o gabarito comentado <b>depois</b> de escrever.</p>
+  <div class="ex disc" id="discList"></div>
+</section>
+
+<!-- ============ 13 · PRÁTICA CARPARTS ============ -->
+<section class="block" id="s13">
+  <div class="block-head"><span class="num">13</span><h2>Atividade prática SAP1-DEVOPS · Carparts</h2></div>
+  <p class="block-sub">Situação de aprendizagem: a Carparts adota o Jenkins como servidor de CI/CD do portal de pedidos B2B, com homologação na Azure.</p>
+
+  <div class="g2">
+    <div class="card accent">
+      <span class="tag">contexto</span>
+      <h4>Carparts · autopeças Tier 1</h4>
+      <p>Equipe de <b>1 designer + 4 desenvolvedores</b>, parque misto com <b>2 estações Windows 11 + WSL 2</b> e <b>2 Ubuntu 24.04</b>. O <b>lead time atual é de 11 dias</b> entre o commit e a produção: builds manuais, testes rodados “quando dá” e deploy feito por uma única pessoa.</p>
+      <p>O portal de pedidos B2B tem uma API Node.js em contêiner e um front-end web. As montadoras clientes passaram a exigir <b>rastreabilidade</b>: saber qual commit está em produção e quem aprovou a publicação.</p>
+    </div>
+    <div class="card blue">
+      <span class="tag">restrições</span>
+      <h4>O que a diretoria definiu</h4>
+      <ul>
+        <li>Servidor de CI/CD <b>Jenkins autogerenciado</b> (dados do ERP ficam on-premises).</li>
+        <li>Homologação na <b>Azure</b> (App Service ou Container Apps + ACR).</li>
+        <li>Orçamento de nuvem para CI/CD de <b>US$ 150/mês</b> (o de IA, US$ 300/mês, continua separado).</li>
+        <li>Aprovação registrada antes de qualquer publicação em produção.</li>
+        <li>Meta: lead time de no máximo <b>2 dias</b> em até dois meses.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Entregáveis</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>#</th><th>Entregável</th><th>Evidência esperada</th><th>Peso</th></tr></thead>
+    <tbody>
+      <tr><td>E1</td><td><b>Arquitetura Jenkins da Carparts</b></td><td>Diagrama com controller, agents (SO, executores, rótulos), portas e onde cada um roda; justificativa do cenário (local em Docker, VM Azure ou AKS)</td><td>15%</td></tr>
+      <tr><td>E2</td><td><b>Controller reprodutível</b></td><td><code>Dockerfile</code> + <code>plugins.txt</code> + <code>casc.yaml</code> com 0 executores no nó interno e sem acesso anônimo; print ou log da subida</td><td>15%</td></tr>
+      <tr><td>E3</td><td><b>Jenkinsfile de CI/CD</b></td><td>Stages de qualidade, imagem, publicação, homologação, aprovação e produção; <code>when</code>, <code>timeout</code>, <code>post</code> e testes publicados com <code>junit</code></td><td>25%</td></tr>
+      <tr><td>E4</td><td><b>Integração com a Azure</b></td><td>Service principal com escopo no grupo de recursos (ou identidade gerenciada), credenciais no Jenkins, deploy via Azure CLI e smoke test em homologação</td><td>20%</td></tr>
+      <tr><td>E5</td><td><b>Multibranch + webhook</b></td><td>Pipeline por branch e PR com status no GitHub; branch <code>main</code> protegida exigindo check verde</td><td>10%</td></tr>
+      <tr><td>E6</td><td><b>Métricas e plano de melhoria</b></td><td>Lead time, frequência de implantação e taxa de falha medidos em pelo menos 10 execuções, comparados à linha de base de 11 dias; estimativa de custo mensal na Azure dentro dos US$ 150</td><td>15%</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout danger">
+    <span class="ttl">Critérios eliminatórios (nota zero na atividade)</span>
+    <ul style="margin:0">
+      <li>Segredo (senha, token, <code>appId</code> + <code>password</code>) commitado no repositório ou visível no log do build.</li>
+      <li>Builds executando no nó interno do controller.</li>
+      <li>Jenkins acessível pela internet sem autenticação ou com a porta 8080 aberta para qualquer origem.</li>
+      <li>Publicação em produção sem registro de aprovação, ou imagem recompilada entre homologação e produção.</li>
+      <li>Entrega sem evidência de execução real (prints, logs ou link do repositório) ou com cópia de outro grupo.</li>
+    </ul>
+  </div>
+
+  <h3>Rubrica</h3>
+  <div class="tbl-scroll"><table class="data">
+    <thead><tr><th>Critério</th><th>Insuficiente (0–4)</th><th>Básico (5–7)</th><th>Proficiente (8–9)</th><th>Avançado (10)</th></tr></thead>
+    <tbody>
+      <tr><td>Arquitetura (E1)</td><td>Sem diagrama ou com builds no controller</td><td>Diagrama correto sem justificativa</td><td>Diagrama e justificativa coerentes com as restrições</td><td>Compara dois cenários com custo e riscos</td></tr>
+      <tr><td>Reprodutibilidade (E2)</td><td>Configuração só por cliques</td><td>Dockerfile com plugins</td><td>Dockerfile + JCasC funcionando</td><td>Tudo versionado, com atualização de LTS testada</td></tr>
+      <tr><td>Pipeline (E3)</td><td>Pipeline sem testes ou sem stages</td><td>CI completa, CD parcial</td><td>CI/CD completa com aprovação e post</td><td>Paralelismo, Shared Library ou matrix bem justificados</td></tr>
+      <tr><td>Azure (E4)</td><td>Sem deploy ou com credencial exposta</td><td>Deploy manual assistido</td><td>Deploy via CLI com escopo mínimo e smoke test</td><td>Identidade gerenciada e rollback documentado</td></tr>
+      <tr><td>Fluxo Git (E5)</td><td>Disparo manual</td><td>pollSCM</td><td>Webhook + Multibranch com status no PR</td><td>Proteção de branch e PR de exemplo comentado</td></tr>
+      <tr><td>Métricas (E6)</td><td>Sem dados</td><td>Dados de poucas execuções</td><td>Métricas DORA com base em 10+ execuções</td><td>Plano de melhoria com metas e custo validado</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Seu plano de entrega</h3>
+  <p>Para cada entregável, descreva como vai produzi-lo e qual evidência vai anexar (mínimo de 25 palavras cada).</p>
+  <div class="ex prat" id="pratList"></div>
+</section>
+
+<!-- ============ 14 · FINALIZAÇÃO ============ -->
+<section class="block" id="s14">
+  <div class="block-head"><span class="num">14</span><h2>Finalização e envio</h2></div>
+  <p class="block-sub">O botão só é habilitado quando todos os itens abaixo estiverem verdes. O relatório <code>.txt</code> reúne suas respostas para anexar no envio.</p>
+  <div class="ex">
+    <ul class="checks" id="finChecks"></ul>
+    <div class="finrow">
+      <button class="btn" type="button" id="finBtn" disabled>Gerar relatório (.txt)</button>
+      <a class="btn ghost" id="finMail" href="#" aria-disabled="true" style="text-decoration:none;pointer-events:none;opacity:.5">Enviar por e-mail</a>
+      <span id="finMsg">Preencha nome e RA na barra superior e conclua as atividades.</span>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer class="foot"><div class="foot-in">
+<h2>Documentação e vídeos de instrução</h2>
+<p style="color:#b9b9c3;max-width:72ch">Links verificados em 11/09/2026. A fonte primária é sempre a documentação oficial em jenkins.io; os vídeos ajudam a visualizar o fluxo, mas podem mostrar versões anteriores (Java 17, Blue Ocean, plugins Azure aposentados).</p>
+<h3>Vídeos de instrução</h3><div class="vids">
+<a class="vid" href="https://www.youtube.com/watch?v=mvtVL5eivzo" target="_blank" rel="noopener"><span class="play">▶</span><span><b>O que é Jenkins | Guia prático para começar com Jenkins</b><span>Fabricio Veronez · PT-BR</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=ejHAKSdAlKs" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Jenkins instalação e configuração – Pipeline Java e Docker</b><span>Feltex · PT-BR</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=7KCS70sCoK0" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Complete Jenkins Pipeline Tutorial | Jenkinsfile explained</b><span>TechWorld with Nana · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/playlist?list=PLy7NrYWoggjw_LIiDK1LXdNN82uYuuuiC" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Jenkins Tutorial for Beginners (playlist)</b><span>TechWorld with Nana · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=EzgCoOQvOf0" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Complete Jenkins Pipeline Tutorial | Jenkinsfile explained</b><span>KodeKloud · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=f4idgaq2VqA" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Jenkins Tutorial – How to Deploy a Test Server with Docker + Linux (Full Course)</b><span>freeCodeCamp.org · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=QLHc4BnVlR0" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Install Jenkins from a Docker Image &amp; Create a Jenkins Pipeline</b><span>Cameron McKenzie · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=cEvgCkv_PSw" target="_blank" rel="noopener"><span class="play">▶</span><span><b>How to Install Jenkins inside Docker container | Step-by-Step Tutorial</b><span>SkillUpRight · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=MmM18rUdqHo" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Installing Jenkins on Ubuntu 24.04</b><span>theurbanpenguin · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/watch?v=o3AOhXQ4Mnc" target="_blank" rel="noopener"><span class="play">▶</span><span><b>CI CD Pipeline using Jenkins – Part 1 | Continuous Integration with Jenkins | Azure DevOps Tutorial</b><span>BestITCourses · EN</span></span></a>
+<a class="vid" href="https://www.youtube.com/@jenkinscicd" target="_blank" rel="noopener"><span class="play">▶</span><span><b>Canal oficial do projeto Jenkins no YouTube</b><span>Jenkins · EN</span></span></a>
+</div><h3 style="border:0;margin-bottom:.9em">Documentação e fontes</h3><div class="srcs">
+<div><h3>Jenkins · documentação oficial</h3><ul>
+<li><a href="https://www.jenkins.io/" target="_blank" rel="noopener">Jenkins — site oficial</a><small>jenkins.io</small></li>
+<li><a href="https://www.jenkins.io/doc/" target="_blank" rel="noopener">Jenkins User Documentation</a><small>jenkins.io/doc</small></li>
+<li><a href="https://www.jenkins.io/doc/book/" target="_blank" rel="noopener">User Handbook</a><small>jenkins.io/doc/book</small></li>
+<li><a href="https://www.jenkins.io/doc/tutorials/" target="_blank" rel="noopener">Tutoriais oficiais</a><small>jenkins.io/doc/tutorials</small></li>
+<li><a href="https://www.jenkins.io/doc/tutorials/build-a-node-js-and-react-app-with-npm/" target="_blank" rel="noopener">Tutorial: Node.js e React com npm</a><small>jenkins.io/doc/tutorials/build-a-node-js-and-react-app-with-npm</small></li>
+<li><a href="https://www.jenkins.io/download/" target="_blank" rel="noopener">Download (LTS 2.568.3 · semanal 2.581)</a><small>jenkins.io/download</small></li>
+<li><a href="https://www.jenkins.io/changelog-stable/" target="_blank" rel="noopener">Changelog LTS</a><small>jenkins.io/changelog-stable</small></li>
+<li><a href="https://www.jenkins.io/doc/book/platform-information/support-policy-java/" target="_blank" rel="noopener">Política de suporte ao Java</a><small>jenkins.io/doc/book/platform-information/support-policy-java</small></li>
+<li><a href="https://www.jenkins.io/security/advisories/" target="_blank" rel="noopener">Security Advisories</a><small>jenkins.io/security/advisories</small></li>
+<li><a href="https://www.jenkins.io/doc/book/security/" target="_blank" rel="noopener">Securing Jenkins</a><small>jenkins.io/doc/book/security</small></li>
+</ul></div>
+<div><h3>Instalação</h3><ul>
+<li><a href="https://www.jenkins.io/doc/book/installing/" target="_blank" rel="noopener">Installing Jenkins (visão geral)</a><small>jenkins.io/doc/book/installing</small></li>
+<li><a href="https://www.jenkins.io/doc/book/installing/windows/" target="_blank" rel="noopener">Instalação no Windows</a><small>jenkins.io/doc/book/installing/windows</small></li>
+<li><a href="https://www.jenkins.io/doc/book/installing/linux/" target="_blank" rel="noopener">Instalação no Linux</a><small>jenkins.io/doc/book/installing/linux</small></li>
+<li><a href="https://www.jenkins.io/doc/book/installing/war-file/" target="_blank" rel="noopener">Arquivo WAR</a><small>jenkins.io/doc/book/installing/war-file</small></li>
+<li><a href="https://www.jenkins.io/doc/book/installing/docker/" target="_blank" rel="noopener">Instalação em Docker</a><small>jenkins.io/doc/book/installing/docker</small></li>
+<li><a href="https://www.jenkins.io/doc/book/installing/kubernetes/" target="_blank" rel="noopener">Instalação em Kubernetes (Helm)</a><small>jenkins.io/doc/book/installing/kubernetes</small></li>
+<li><a href="https://www.jenkins.io/doc/book/managing/nodes/" target="_blank" rel="noopener">Managing Nodes (controller, agents, executores)</a><small>jenkins.io/doc/book/managing/nodes</small></li>
+<li><a href="https://www.jenkins.io/doc/book/using/using-credentials/" target="_blank" rel="noopener">Using credentials</a><small>jenkins.io/doc/book/using/using-credentials</small></li>
+</ul></div>
+<div><h3>Pipeline</h3><ul>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/" target="_blank" rel="noopener">Pipeline (conceitos)</a><small>jenkins.io/doc/book/pipeline</small></li>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/jenkinsfile/" target="_blank" rel="noopener">Using a Jenkinsfile</a><small>jenkins.io/doc/book/pipeline/jenkinsfile</small></li>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/syntax/" target="_blank" rel="noopener">Pipeline Syntax</a><small>jenkins.io/doc/book/pipeline/syntax</small></li>
+<li><a href="https://www.jenkins.io/doc/pipeline/steps/" target="_blank" rel="noopener">Pipeline Steps Reference</a><small>jenkins.io/doc/pipeline/steps</small></li>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/multibranch/" target="_blank" rel="noopener">Branches and Pull Requests (Multibranch)</a><small>jenkins.io/doc/book/pipeline/multibranch</small></li>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/shared-libraries/" target="_blank" rel="noopener">Shared Libraries</a><small>jenkins.io/doc/book/pipeline/shared-libraries</small></li>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/pipeline-best-practices/" target="_blank" rel="noopener">Pipeline Best Practices</a><small>jenkins.io/doc/book/pipeline/pipeline-best-practices</small></li>
+<li><a href="https://www.jenkins.io/doc/book/pipeline/docker/" target="_blank" rel="noopener">Using Docker with Pipeline</a><small>jenkins.io/doc/book/pipeline/docker</small></li>
+</ul></div>
+<div><h3>Plugins, código e comunidade</h3><ul>
+<li><a href="https://plugins.jenkins.io/" target="_blank" rel="noopener">Índice de plugins (2.000+)</a><small>plugins.jenkins.io</small></li>
+<li><a href="https://plugins.jenkins.io/pipeline-graph-view/" target="_blank" rel="noopener">Pipeline Graph View</a><small>plugins.jenkins.io/pipeline-graph-view</small></li>
+<li><a href="https://plugins.jenkins.io/docker-workflow/" target="_blank" rel="noopener">Docker Pipeline</a><small>plugins.jenkins.io/docker-workflow</small></li>
+<li><a href="https://plugins.jenkins.io/configuration-as-code/" target="_blank" rel="noopener">Configuration as Code (JCasC)</a><small>plugins.jenkins.io/configuration-as-code</small></li>
+<li><a href="https://www.jenkins.io/projects/jcasc/" target="_blank" rel="noopener">Projeto JCasC</a><small>jenkins.io/projects/jcasc</small></li>
+<li><a href="https://plugins.jenkins.io/blueocean/" target="_blank" rel="noopener">Blue Ocean (sem novas funcionalidades)</a><small>plugins.jenkins.io/blueocean</small></li>
+<li><a href="https://plugins.jenkins.io/github/" target="_blank" rel="noopener">GitHub plugin (webhook /github-webhook/)</a><small>plugins.jenkins.io/github</small></li>
+<li><a href="https://github.com/jenkinsci/jenkins" target="_blank" rel="noopener">GitHub · jenkinsci/jenkins</a><small>github.com/jenkinsci/jenkins</small></li>
+<li><a href="https://github.com/jenkinsci/docker" target="_blank" rel="noopener">GitHub · jenkinsci/docker (imagem oficial)</a><small>github.com/jenkinsci/docker</small></li>
+<li><a href="https://hub.docker.com/r/jenkins/jenkins" target="_blank" rel="noopener">Docker Hub · jenkins/jenkins</a><small>hub.docker.com/r/jenkins/jenkins</small></li>
+<li><a href="https://github.com/jenkinsci/helm-charts" target="_blank" rel="noopener">GitHub · jenkinsci/helm-charts</a><small>github.com/jenkinsci/helm-charts</small></li>
+<li><a href="https://community.jenkins.io/" target="_blank" rel="noopener">Fórum da comunidade</a><small>community.jenkins.io</small></li>
+<li><a href="https://www.jenkins.io/project/governance/" target="_blank" rel="noopener">Governança do projeto</a><small>jenkins.io/project/governance</small></li>
+</ul></div>
+<div><h3>Azure · Microsoft Learn</h3><ul>
+<li><a href="https://learn.microsoft.com/en-us/azure/developer/jenkins/" target="_blank" rel="noopener">Jenkins on Azure documentation</a><small>learn.microsoft.com/en-us/azure/developer/jenkins</small></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/developer/jenkins/overview" target="_blank" rel="noopener">Overview of Jenkins and Azure</a><small>learn.microsoft.com/en-us/azure/developer/jenkins/overview</small></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/developer/jenkins/configure-on-linux-vm" target="_blank" rel="noopener">Quickstart: Jenkins numa VM Linux</a><small>learn.microsoft.com/en-us/azure/developer/jenkins/configure-on-linux-vm</small></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/developer/jenkins/plug-ins-for-azure" target="_blank" rel="noopener">Jenkins plug-ins for Azure (status e aposentadoria)</a><small>learn.microsoft.com/en-us/azure/developer/jenkins/plug-ins-for-azure</small></li>
+<li><a href="https://github.com/azure-deprecation/dashboard/issues/132" target="_blank" rel="noopener">Aviso: plugins Jenkins para Azure aposentados em 29/02/2024</a><small>github.com/azure-deprecation/dashboard/issues/132</small></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/developer/jenkins/deploy-to-azure-app-service-using-azure-cli" target="_blank" rel="noopener">Tutorial: deploy no App Service com Jenkins e Azure CLI</a><small>learn.microsoft.com/en-us/azure/developer/jenkins/deploy-to-azure-app-service-using-azure-cli</small></li>
+<li><a href="https://learn.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli" target="_blank" rel="noopener">Criar service principal com a Azure CLI</a><small>learn.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli</small></li>
+<li><a href="https://learn.microsoft.com/en-us/cli/azure/webapp/config/container" target="_blank" rel="noopener">az webapp config container</a><small>learn.microsoft.com/en-us/cli/azure/webapp/config/container</small></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/container-registry/" target="_blank" rel="noopener">Azure Container Registry</a><small>learn.microsoft.com/en-us/azure/container-registry</small></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/aks/" target="_blank" rel="noopener">Azure Kubernetes Service</a><small>learn.microsoft.com/en-us/azure/aks</small></li>
+<li><a href="https://plugins.jenkins.io/azure-credentials/" target="_blank" rel="noopener">Plugin Azure Credentials (comunidade)</a><small>plugins.jenkins.io/azure-credentials</small></li>
+<li><a href="https://plugins.jenkins.io/azure-vm-agents/" target="_blank" rel="noopener">Plugin Azure VM Agents (comunidade)</a><small>plugins.jenkins.io/azure-vm-agents</small></li>
+<li><a href="https://azuredevopslabs.com/labs/azure/jenkinscicd/" target="_blank" rel="noopener">Lab: Java CI/CD com Jenkins e Azure Web Apps</a><small>azuredevopslabs.com/labs/azure/jenkinscicd</small></li>
+</ul></div>
+<div><h3>História e metodologia</h3><ul>
+<li><a href="https://en.wikipedia.org/wiki/Jenkins_(software)" target="_blank" rel="noopener">Wikipedia · Jenkins (software)</a><small>en.wikipedia.org/wiki/Jenkins_(software)</small></li>
+<li><a href="https://en.wikipedia.org/wiki/Hudson_(software)" target="_blank" rel="noopener">Wikipedia · Hudson (software)</a><small>en.wikipedia.org/wiki/Hudson_(software)</small></li>
+<li><a href="https://www.theregister.com/2018/11/09/jenkins_interview/" target="_blank" rel="noopener">The Register · entrevista com Kohsuke Kawaguchi (2018)</a><small>theregister.com/2018/11/09/jenkins_interview</small></li>
+<li><a href="https://cd.foundation/projects/" target="_blank" rel="noopener">Continuous Delivery Foundation · projetos</a><small>cd.foundation/projects</small></li>
+<li><a href="https://martinfowler.com/articles/continuousIntegration.html" target="_blank" rel="noopener">Martin Fowler · Continuous Integration</a><small>martinfowler.com/articles/continuousIntegration.html</small></li>
+<li><a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener">DORA · métricas de desempenho de entrega</a><small>dora.dev/guides/dora-metrics-four-keys</small></li>
+</ul></div>
+</div><p class="fine">UNISENAI · Faculdade SENAI · Integração e Entrega Contínua – DevOps · 2º ADS · Aula 06 · 11/09/2026. Fontes acessadas em 11/09/2026. Jenkins® é marca registrada de LF Charities Inc.; Azure é marca da Microsoft. Material didático para uso em sala de aula.</p></div></footer>
+<script>
+var DGOPTS=["Controller","Agent / nó","Plugin","Jenkinsfile"];
+var DG=[
+ {t:"Decide quando e onde cada job vai rodar, mantém a fila de builds e serve a interface web.",a:0,e:"Essa é a função do controller: o “cérebro” que agenda, autoriza e distribui o trabalho para os agents."},
+ {t:"Processo Java leve conectado ao servidor que executa <code>npm test</code> numa máquina Ubuntu 24.04 com Docker.",a:1,e:"Quem executa os passos do build é o agent, rodando num nó com as ferramentas necessárias."},
+ {t:"Arquivo versionado no Git com os stages Build, Test e Deploy do portal B2B.",a:3,e:"O Jenkinsfile é o pipeline como código: fica no repositório e passa por revisão como qualquer código."},
+ {t:"Pipeline Graph View, que desenha os stages e seus status na interface.",a:2,e:"É um plugin de visualização, alternativa recomendada ao Blue Ocean, que não recebe novas funcionalidades."},
+ {t:"Deve ficar com <b>0 executores</b> por motivos de segurança, desempenho e escalabilidade.",a:0,e:"O nó interno (built-in node) pertence ao controller. Builds ali teriam acesso ao JENKINS_HOME."},
+ {t:"Bloco <code>post { failure { mail ... } }</code> que avisa a equipe quando o build quebra.",a:3,e:"A seção post faz parte da sintaxe declarativa do Jenkinsfile."},
+ {t:"Estação Windows 11 conectada ao servidor pela porta 50000 para compilar o módulo .NET.",a:1,e:"É um agent inbound: o processo do agent inicia a conexão com o controller pela porta TCP 50000."},
+ {t:"Docker Pipeline, que habilita <code>agent { docker { image ... } }</code> e <code>docker.withRegistry</code>.",a:2,e:"Esses recursos vêm do plugin docker-workflow (Docker Pipeline), instalado no controller."},
+ {t:"Diretório <code>JENKINS_HOME</code> com a configuração dos jobs, credenciais criptografadas e histórico.",a:0,e:"O JENKINS_HOME é o estado do controller; é ele que precisa de backup ou de volume persistente."},
+ {t:"<code>input message: 'Publicar em produção?'</code> antes do stage de deploy.",a:3,e:"O passo input, escrito no Jenkinsfile, pausa o pipeline e registra quem aprovou."}
+];
+
+var SEQ=[
+ "Desenvolvedor faz push da branch e abre um pull request no GitHub",
+ "Webhook do GitHub notifica o Jenkins em /github-webhook/",
+ "Multibranch Pipeline detecta a mudança e o controller agenda o build num agent",
+ "Agent faz checkout do código e lê o Jenkinsfile",
+ "Stage de qualidade: npm ci, lint e testes publicados com junit",
+ "Build da imagem Docker com a tag do número do build",
+ "Push da imagem para o Azure Container Registry",
+ "Deploy em homologação via Azure CLI e smoke test no /health",
+ "Aprovação registrada (input) e promoção da mesma imagem para produção"
+];
+
+var QZ=[
+ {q:"Por que o projeto Hudson passou a se chamar Jenkins em 2011?",o:["Porque a Sun Microsystems encerrou o projeto antes de ser comprada","Por uma disputa com a Oracle sobre a marca “Hudson” e o controle da infraestrutura do projeto","Porque a CloudBees comprou os direitos do nome Hudson","Para marcar o lançamento do Pipeline como código"],a:1,e:"Após comprar a Sun, a Oracle reivindicou a marca Hudson. A comunidade votou pela renomeação (aprovada em 29/01/2011) e o Jenkins seguiu como projeto comunitário."},
+ {q:"Qual versão de Java é exigida pela LTS 2.568.3 do Jenkins?",o:["Java 11 ou 17","Java 17 ou 21","Java 21 ou 25","Qualquer versão a partir do Java 8"],a:2,e:"Desde a LTS 2.555.1 (abril/2026), controller e agents precisam de Java 21 ou 25."},
+ {q:"Qual afirmação descreve Entrega Contínua (e não Implantação Contínua)?",o:["O software fica sempre pronto para produção, e a publicação é uma decisão de negócio","Toda mudança aprovada nos testes vai para produção automaticamente","Os desenvolvedores integram código uma vez por sprint","Os testes são executados manualmente antes de cada release"],a:0,e:"Na Entrega Contínua o pipeline leva a mudança até estar pronta; a ida à produção pode exigir aprovação. Na Implantação Contínua não há gate manual."},
+ {q:"Qual recurso descreve a configuração do controller Jenkins inteiro num arquivo YAML?",o:["Jenkinsfile declarativo","Shared Library","Blue Ocean","Jenkins Configuration as Code (JCasC), apontado por CASC_JENKINS_CONFIG"],a:3,e:"O JCasC lê um YAML (por exemplo casc.yaml) indicado pela variável CASC_JENKINS_CONFIG e aplica a configuração na inicialização."},
+ {q:"Como fazer um stage declarativo rodar apenas na branch main?",o:["when { branch 'main' }","options { branch 'main' }","triggers { branch 'main' }","agent { branch 'main' }"],a:0,e:"A diretiva when controla a execução condicional de um stage; branch é uma das condições disponíveis."},
+ {q:"Por que se recomenda configurar 0 executores no nó interno (built-in node)?",o:["Para economizar licenças do Jenkins","Porque o nó interno só executa pipelines scripted","Por segurança, desempenho e escalabilidade: builds no controller acessam o JENKINS_HOME e disputam recursos","Porque o Jenkins não permite executores no controller desde a versão 2.0"],a:2,e:"A documentação desaconselha rodar tarefas no nó interno. Com 0 executores, todo o trabalho vai para agents."},
+ {q:"Qual tipo de item cria automaticamente um pipeline para cada branch e pull request que tenha Jenkinsfile?",o:["Freestyle project","Pipeline","Folder","Multibranch Pipeline"],a:3,e:"O Multibranch Pipeline varre o repositório, cria jobs por branch/PR e remove os de branches apagadas."},
+ {q:"No tutorial oficial de instalação em Docker, qual é o papel do contêiner docker:dind?",o:["Hospedar a interface web do Jenkins","Executar um daemon Docker isolado, acessado via TLS, para os comandos Docker dos pipelines","Guardar o volume JENKINS_HOME","Servir como agent Windows"],a:1,e:"O Jenkins recebe DOCKER_HOST=tcp://docker:2376 e envia os comandos Docker ao dind, sem montar o socket do host."},
+ {q:"Após 29/02/2024, qual é a recomendação da Microsoft para integrar o Jenkins aos serviços Azure?",o:["Usar a Azure CLI nos passos do pipeline","Usar os plugins oficiais Azure App Service e Azure Functions","Migrar obrigatoriamente para Azure Pipelines","Usar apenas o Blue Ocean"],a:0,e:"Com a aposentadoria dos plugins mantidos pela Microsoft, a recomendação oficial é a Azure CLI."},
+ {q:"Onde gerar trechos de código de steps compatíveis com os plugins instalados no seu Jenkins?",o:["No índice plugins.jenkins.io","No changelog LTS","No Snippet Generator, em JENKINS_URL/pipeline-syntax","No arquivo initialAdminPassword"],a:2,e:"O Snippet Generator monta o código a partir de formulários, usando os plugins do próprio servidor."},
+ {q:"Por que usar aspas simples em sh '... $AZURE_CLIENT_SECRET ...' ao lidar com segredos?",o:["Porque aspas duplas não funcionam em Linux","Para acelerar o build","Porque o Jenkins exige aspas simples em todos os steps","Para que o shell expanda a variável e o Groovy não interpole o segredo na linha de comando e no log"],a:3,e:"A interpolação Groovy (aspas duplas) pode expor o segredo; com aspas simples, quem expande é o shell, a partir da variável mascarada."},
+ {q:"O princípio “construa uma vez, implante muitas” significa que:",o:["Cada ambiente recompila a aplicação a partir do código-fonte","O mesmo artefato (por exemplo, a imagem carparts-api:57) é promovido de homologação para produção","O pipeline só pode rodar uma vez por dia","Não é necessário ambiente de homologação"],a:1,e:"Promover o mesmo artefato garante que o que foi testado em homologação é exatamente o que vai para produção."}
+];
+
+var DISC=[
+ {q:"Com base na história do Hudson e do Jenkins, explique por que a governança de um projeto open source importa para uma empresa que vai depender dele, como a Carparts.",g:"Espera-se citar que o Hudson nasceu na Sun (2004), que a compra pela Oracle gerou disputa sobre a marca e o controle da infraestrutura e que a comunidade migrou para o Jenkins em 2011, deixando o Hudson obsoleto (2017). A lição: o valor de uma ferramenta está na comunidade que a mantém. Para a Carparts, avaliar governança (fundação neutra como a CD Foundation, licença MIT, número de mantenedores, frequência de releases e avisos de segurança) reduz o risco de ficar presa a um projeto abandonado."},
+ {q:"Diferencie Integração Contínua, Entrega Contínua e Implantação Contínua. Qual delas a Carparts deve adotar primeiro, considerando a exigência de aprovação registrada das montadoras?",g:"CI: integrar ao tronco com frequência, cada integração verificada por build e testes automatizados. Entrega Contínua: software sempre pronto para produção; a publicação é uma decisão, podendo ter aprovação. Implantação Contínua: tudo que passa nos testes vai automaticamente para produção. A Carparts deve consolidar CI e depois Entrega Contínua com um passo input (aprovação registrada com usuário e horário), que atende à rastreabilidade exigida. Implantação Contínua pura conflitaria com a exigência de aprovação."},
+ {q:"Descreva a arquitetura controller/agents do Jenkins e justifique por que o nó interno deve ter 0 executores. Onde você colocaria os agents Windows e Linux da Carparts?",g:"O controller agenda, guarda configuração, credenciais e histórico (JENKINS_HOME) e serve a interface; agents são processos Java que executam os builds em nós com as ferramentas; executores são as vagas de execução. Builds no nó interno teriam acesso ao JENKINS_HOME e competiriam por CPU/memória com o controller, por isso 0 executores. Proposta coerente: agents Linux (Ubuntu 24.04 com Docker, rótulo linux && docker) para a API e imagens; agent Windows 11 para componentes que exigem Windows; agents efêmeros na Azure para picos, respeitando o orçamento."},
+ {q:"Compare instalar o Jenkins via MSI no Windows, via pacote apt no Ubuntu e via contêiner Docker para o laboratório da turma. Aponte vantagens e riscos de cada opção.",g:"MSI: familiar para quem usa Windows, cria serviço, mas exige Java instalado, conta de serviço com LogonAsService e é mais difícil de descartar. apt: integrado ao systemd, atualizações pelo gerenciador de pacotes, bom para servidores; exige Java 21/25 e atenção à chave do repositório. Docker: descartável, reprodutível, versão fixada pela tag, fácil de atualizar trocando a imagem; riscos: volumes (evitar bind mount com permissão errada), não montar docker.sock sem necessidade. Para laboratório, Docker costuma ser a melhor escolha."},
+ {q:"Explique o Jenkinsfile de CI/CD da seção 06: o papel de agent none no topo, de when, do input fora de um agent e do bloco post. O que aconteceria se o input estivesse dentro de um stage com agent?",g:"agent none no topo faz cada stage escolher seu próprio agent (Node em contêiner para testes, agent com Docker para imagem). when { branch 'main' } limita publicação e deploy à main, deixando branches e PRs só com CI. O input fica num stage sem agent para não ocupar um executor enquanto espera aprovação (com timeout de 1 dia). post trata sucesso e falha (mensagem e e-mail). Se o input estivesse num stage com agent, o executor ficaria preso durante toda a espera, bloqueando outros builds."},
+ {q:"Com a aposentadoria dos plugins Azure em 2024, como integrar Jenkins e Azure com segurança? Discuta service principal × identidade gerenciada, escopo mínimo e o risco de abrir a porta 8080.",g:"A recomendação é usar a Azure CLI nos steps. A identidade pode ser um service principal (az ad sp create-for-rbac) com papel e escopo restritos ao grupo de recursos da aplicação, guardado como credencial no Jenkins e usado com withCredentials e aspas simples; ou identidade gerenciada, quando o Jenkins roda na Azure, eliminando senhas. Abrir a 8080 para qualquer origem expõe login e possíveis vulnerabilidades: preferir túnel SSH, Bastion, proxy HTTPS e regras de NSG restritas ao IP necessário."}
+];
+
+var PRAT=[
+ {id:"E1",t:"Arquitetura Jenkins da Carparts",w:15},
+ {id:"E2",t:"Controller reprodutível (Dockerfile + plugins + JCasC)",w:15},
+ {id:"E3",t:"Jenkinsfile de CI/CD",w:25},
+ {id:"E4",t:"Integração com a Azure",w:20},
+ {id:"E5",t:"Multibranch + webhook",w:10},
+ {id:"E6",t:"Métricas e plano de melhoria",w:15}
+];
+
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s);};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+function words(s){var m=String(s||"").trim().match(/\S+/g);return m?m.length:0;}
+function plain(html){var d=document.createElement("div");d.innerHTML=html;return d.textContent;}
+var L="ABCD";
+
+/* ---------- progresso e trilho ---------- */
+var prog=$("#prog"), rail=$$(".rail a");
+var secs=rail.map(function(a){return document.getElementById(a.getAttribute("href").slice(1));});
+function onScroll(){
+  var h=document.documentElement, max=h.scrollHeight-h.clientHeight;
+  prog.style.width=(max>0?(h.scrollTop/max*100):0)+"%";
+  var cur=0;
+  secs.forEach(function(s,i){if(s&&s.getBoundingClientRect().top<window.innerHeight*0.35)cur=i;});
+  rail.forEach(function(a,i){a.classList.toggle("on",i===cur);});
+}
+window.addEventListener("scroll",onScroll,{passive:true});
+window.addEventListener("resize",onScroll);
+
+/* ---------- abas ---------- */
+$$(".tabs").forEach(function(tb){
+  var btns=$$("button",tb);
+  btns.forEach(function(b){
+    b.addEventListener("click",function(){
+      btns.forEach(function(x){
+        x.classList.toggle("on",x===b);
+        var p=document.getElementById(x.getAttribute("data-pane"));
+        if(p)p.classList.toggle("on",x===b);
+      });
+    });
+  });
+});
+
+/* ---------- realce de sintaxe ---------- */
+var KW={
+  groovy:"pipeline|agent|stages|stage|steps|post|environment|options|parameters|triggers|tools|when|input|parallel|matrix|script|node|always|success|failure|unstable|changed|fixed|regression|aborted|cleanup|def|if|else|try|catch|finally|return|true|false|none|any|docker|label|sh|bat|junit|echo|mail|withCredentials|withRegistry|timeout|checkout|branch",
+  bash:"sudo|apt|apt-get|docker|az|kubectl|helm|systemctl|java|curl|wget|ssh|echo|winget|git|npm|tar",
+  bat:"docker",
+  powershell:"winget|java|Get-Service|Restart-Service|Get-Content|Start-Process",
+  dockerfile:"FROM|USER|RUN|ENV|COPY|WORKDIR|EXPOSE|CMD|ENTRYPOINT",
+  yaml:""
+};
+function highlight(pre){
+  var code=pre.querySelector("code"), lang=pre.getAttribute("data-lang")||"text";
+  if(lang==="text")return;
+  var txt=code.textContent, parts=[];
+  var cmt = lang==="groovy" ? "\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/" : "(?<![^\\s])#[^\\n]*";
+  var str = lang==="groovy" ? "'''[\\s\\S]*?'''|\"\"\"[\\s\\S]*?\"\"\"|'(?:[^'\\\\\\n]|\\\\.)*'|\"(?:[^\"\\\\\\n]|\\\\.)*\"" : "'[^'\\n]*'|\"(?:[^\"\\\\\\n]|\\\\.)*\"";
+  var vr="\\$\\{?[A-Za-z_][A-Za-z0-9_]*\\}?";
+  var kw = KW[lang] ? "(?<![\\w-])(?:"+KW[lang]+")(?![\\w-])" : "(?!)";
+  var ykey = lang==="yaml" ? "[A-Za-z_][\\w-]*(?=:(?:\\s|$))" : "(?!)";
+  var re=new RegExp("("+cmt+")|("+str+")|("+vr+")|("+kw+")|("+ykey+")","gm");
+  var last=0,m;
+  while((m=re.exec(txt))!==null){
+    if(m[0].length===0){re.lastIndex++;continue;}
+    parts.push(esc(txt.slice(last,m.index)));
+    var cls=m[1]?"cmt":m[2]?"str":m[3]?"var":"key";
+    parts.push('<span class="'+cls+'">'+esc(m[0])+"</span>");
+    last=m.index+m[0].length;
+  }
+  parts.push(esc(txt.slice(last)));
+  code.innerHTML=parts.join("");
+}
+$$("pre.code").forEach(function(p){try{highlight(p);}catch(e){}});
+
+/* ---------- copiar código ---------- */
+$$(".codebox .cp").forEach(function(b){
+  b.addEventListener("click",function(){
+    var t=b.closest(".codebox").querySelector("pre").textContent;
+    function done(){b.textContent="copiado ✓";setTimeout(function(){b.textContent="copiar";},1600);}
+    if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,fallback);}else{fallback();}
+    function fallback(){var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done();}catch(e){}document.body.removeChild(ta);}
+  });
+});
+
+/* ---------- 09 · exercício guiado ---------- */
+var dgAns=DG.map(function(){return null;});
+function renderDG(){
+  $("#dgList").innerHTML=DG.map(function(it,i){
+    return '<div class="qitem" id="dg-'+i+'"><div class="q"><small>'+String(i+1).padStart(2,"0")+"</small>"+it.t+'</div><div class="opts four">'+
+      DGOPTS.map(function(o,j){return '<button type="button" data-i="'+i+'" data-j="'+j+'">'+esc(o)+"</button>";}).join("")+
+      '</div><div class="fb"></div></div>';
+  }).join("");
+  $$("#dgList .opts button").forEach(function(b){b.addEventListener("click",function(){answerDG(+b.dataset.i,+b.dataset.j);});});
+  updDG();
+}
+function answerDG(i,j){
+  if(dgAns[i]!==null)return;
+  dgAns[i]=j;
+  var box=$("#dg-"+i), ok=(j===DG[i].a);
+  $$("button",box).forEach(function(b){
+    b.disabled=true;
+    var bj=+b.dataset.j;
+    if(bj===j)b.classList.add(ok?"sel-ok":"sel-no");
+    if(!ok&&bj===DG[i].a)b.classList.add("right");
+  });
+  var fb=$(".fb",box);
+  fb.className="fb show "+(ok?"ok":"no");
+  fb.innerHTML=(ok?"<b>Correto.</b> ":"<b>Não é esse.</b> Resposta: <b>"+esc(DGOPTS[DG[i].a])+"</b>. ")+DG[i].e;
+  updDG();
+}
+function updDG(){
+  var n=0,c=0;
+  $("#dgPills").innerHTML=DG.map(function(it,i){
+    var cls="";
+    if(dgAns[i]!==null){n++;if(dgAns[i]===it.a){c++;cls="ok";}else cls="no";}
+    return '<span class="'+cls+'">'+(i+1)+"</span>";
+  }).join("");
+  $("#dgScore").textContent="Respondidas: "+n+"/"+DG.length+" · Acertos: "+c;
+  updFin();
+}
+$("#dgReset").addEventListener("click",function(){dgAns=DG.map(function(){return null;});renderDG();});
+
+/* ---------- 10 · sequência ---------- */
+var seqOrder=[], seqChecked=false, seqOk=false, seqTries=0;
+function shuffleSeq(){
+  var a=SEQ.map(function(_,i){return i;});
+  do{for(var i=a.length-1;i>0;i--){var k=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[k];a[k]=t;}}
+  while(a.every(function(v,i){return v===i;}));
+  seqOrder=a; seqChecked=false; seqOk=false;
+  var fb=$("#seqFb"); fb.className="fb"; fb.innerHTML="";
+  renderSeq(false);
+}
+function renderSeq(mark){
+  $("#seqList").innerHTML=seqOrder.map(function(v,pos){
+    var cls=mark?(v===pos?"good":"bad"):"";
+    return '<li class="'+cls+'"><span class="pos">'+String(pos+1).padStart(2,"0")+'</span><span class="txt">'+esc(SEQ[v])+
+      '</span><span class="mv"><button type="button" data-p="'+pos+'" data-d="-1" aria-label="subir">▲</button><button type="button" data-p="'+pos+'" data-d="1" aria-label="descer">▼</button></span></li>';
+  }).join("");
+  $$("#seqList .mv button").forEach(function(b){
+    b.addEventListener("click",function(){
+      var p=+b.dataset.p, d=+b.dataset.d, q=p+d;
+      if(q<0||q>=seqOrder.length)return;
+      var t=seqOrder[p];seqOrder[p]=seqOrder[q];seqOrder[q]=t;
+      renderSeq(false);
+    });
+  });
+}
+$("#seqCheck").addEventListener("click",function(){
+  seqTries++; seqChecked=true;
+  var wrong=seqOrder.filter(function(v,i){return v!==i;}).length;
+  seqOk=(wrong===0);
+  renderSeq(true);
+  var fb=$("#seqFb");
+  if(seqOk){
+    fb.className="fb show ok";
+    fb.innerHTML="<b>Ordem correta!</b> Do push à produção: o webhook dispara o Multibranch, o agent testa, a imagem é construída uma única vez, publicada no ACR, validada em homologação e só então promovida à produção com aprovação registrada.";
+  }else{
+    fb.className="fb show no";
+    fb.innerHTML="<b>Há "+wrong+" etapa(s) fora do lugar.</b> Lembre: nada é testado antes do checkout, a imagem só é publicada depois de construída e a aprovação vem depois da homologação, nunca antes.";
+  }
+  updFin();
+});
+$("#seqShuffle").addEventListener("click",function(){shuffleSeq();updFin();});
+
+/* ---------- 11 · quiz ---------- */
+var qzAns=QZ.map(function(){return null;});
+function renderQZ(){
+  $("#qzList").innerHTML=QZ.map(function(it,i){
+    return '<div class="qitem" id="qz-'+i+'"><div class="q"><small>Q'+String(i+1).padStart(2,"0")+"</small>"+esc(it.q)+'</div><div class="opts">'+
+      it.o.map(function(o,j){return '<button type="button" data-i="'+i+'" data-j="'+j+'"><b>'+L[j]+")</b> "+esc(o)+"</button>";}).join("")+
+      '</div><div class="fb"></div></div>';
+  }).join("");
+  $$("#qzList .opts button").forEach(function(b){b.addEventListener("click",function(){answerQZ(+b.dataset.i,+b.dataset.j);});});
+  updQZ();
+}
+function answerQZ(i,j){
+  if(qzAns[i]!==null)return;
+  qzAns[i]=j;
+  var box=$("#qz-"+i), ok=(j===QZ[i].a);
+  $$("button",box).forEach(function(b){
+    b.disabled=true; var bj=+b.dataset.j;
+    if(bj===j)b.classList.add(ok?"sel-ok":"sel-no");
+    if(!ok&&bj===QZ[i].a)b.classList.add("right");
+  });
+  var fb=$(".fb",box);
+  fb.className="fb show "+(ok?"ok":"no");
+  fb.innerHTML=(ok?"<b>Correto.</b> ":"<b>Incorreto.</b> Resposta: <b>"+L[QZ[i].a]+"</b>. ")+esc(QZ[i].e);
+  updQZ();
+}
+function updQZ(){
+  var n=0,c=0;
+  $("#qzPills").innerHTML=QZ.map(function(it,i){
+    var cls="";
+    if(qzAns[i]!==null){n++;if(qzAns[i]===it.a){c++;cls="ok";}else cls="no";}
+    return '<span class="'+cls+'">'+(i+1)+"</span>";
+  }).join("");
+  $("#qzScore").textContent="Respondidas: "+n+"/"+QZ.length+" · Acertos: "+c;
+  updFin();
+}
+
+/* ---------- 12 · dissertativas ---------- */
+var DMIN=40;
+$("#discList").innerHTML=DISC.map(function(it,i){
+  return '<div class="qitem"><div class="q"><small>D'+(i+1)+"</small>"+esc(it.q)+'</div><textarea id="disc'+i+'" placeholder="Sua resposta (mínimo de '+DMIN+' palavras)"></textarea><p class="wc" id="discWc'+i+'">0 palavras</p>'+
+    '<details class="spoiler"><summary>Ver gabarito comentado</summary><div>'+esc(it.g)+"</div></details></div>";
+}).join("");
+DISC.forEach(function(_,i){
+  var ta=$("#disc"+i), wc=$("#discWc"+i);
+  ta.addEventListener("input",function(){var n=words(ta.value);wc.textContent=n+" palavra"+(n===1?"":"s")+(n>=DMIN?" ✓":" · faltam "+(DMIN-n));wc.classList.toggle("ok",n>=DMIN);updFin();});
+});
+
+/* ---------- 13 · prática ---------- */
+var PMIN=25;
+$("#pratList").innerHTML=PRAT.map(function(it,i){
+  return '<div class="deliv"><h4><span>'+esc(it.id)+" · "+esc(it.t)+'</span><span class="badge r">peso '+it.w+'%</span></h4><textarea id="prat'+i+'" placeholder="Como vou produzir e que evidência vou anexar (mínimo de '+PMIN+' palavras)"></textarea><p class="wc" id="pratWc'+i+'">0 palavras</p></div>';
+}).join("");
+PRAT.forEach(function(_,i){
+  var ta=$("#prat"+i), wc=$("#pratWc"+i);
+  ta.addEventListener("input",function(){var n=words(ta.value);wc.textContent=n+" palavra"+(n===1?"":"s")+(n>=PMIN?" ✓":" · faltam "+(PMIN-n));wc.classList.toggle("ok",n>=PMIN);updFin();});
+});
+
+/* ---------- 14 · finalização ---------- */
+var nome=$("#alunoNome"), ra=$("#alunoRA");
+[nome,ra].forEach(function(el){el.addEventListener("input",updFin);});
+function state(){
+  var dgN=dgAns.filter(function(v){return v!==null;}).length;
+  var qzN=qzAns.filter(function(v){return v!==null;}).length;
+  var dOk=DISC.every(function(_,i){return words($("#disc"+i).value)>=DMIN;});
+  var pOk=PRAT.every(function(_,i){return words($("#prat"+i).value)>=PMIN;});
+  return [
+    {t:"Nome preenchido",ok:nome.value.trim().length>=3},
+    {t:"RA preenchido",ok:ra.value.trim().length>=3},
+    {t:"Exercício guiado: 10/10 respondidas ("+dgN+"/10)",ok:dgN===DG.length},
+    {t:"Sequência verificada"+(seqChecked?(seqOk?" (correta)":" (com erros)"):""),ok:seqChecked},
+    {t:"Quiz: 12/12 respondidas ("+qzN+"/12)",ok:qzN===QZ.length},
+    {t:"Dissertativas: 6 respostas com "+DMIN+"+ palavras",ok:dOk},
+    {t:"Prática Carparts: 6 planos com "+PMIN+"+ palavras",ok:pOk}
+  ];
+}
+function updFin(){
+  if(!$("#finChecks"))return;
+  var st=state(), all=st.every(function(s){return s.ok;});
+  $("#finChecks").innerHTML=st.map(function(s){return '<li class="'+(s.ok?"ok":"")+'"><i></i>'+esc(s.t)+"</li>";}).join("");
+  $("#finBtn").disabled=!all;
+  var mail=$("#finMail");
+  if(all){
+    mail.style.pointerEvents="auto";mail.style.opacity="1";mail.setAttribute("aria-disabled","false");
+    var subj="DevOps · Aula 06 · Jenkins · "+nome.value.trim()+" ("+ra.value.trim()+")";
+    var sc=scores();
+    var body="Aluno: "+nome.value.trim()+"\nRA: "+ra.value.trim()+"\n\nExercício guiado: "+sc.dg+"/10\nSequência: "+(seqOk?"correta":"com erros")+" ("+seqTries+" tentativa(s))\nQuiz: "+sc.qz+"/12\n\nSegue em anexo o relatório .txt gerado na página da aula.";
+    mail.href="mailto:?subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);
+    $("#finMsg").textContent="Tudo pronto: gere o relatório e anexe no e-mail.";
+  }else{
+    mail.style.pointerEvents="none";mail.style.opacity=".5";mail.setAttribute("aria-disabled","true");mail.href="#";
+    $("#finMsg").textContent="Faltam "+st.filter(function(s){return !s.ok;}).length+" item(ns) para liberar o envio.";
+  }
+}
+function scores(){
+  return {
+    dg:dgAns.filter(function(v,i){return v===DG[i].a;}).length,
+    qz:qzAns.filter(function(v,i){return v===QZ[i].a;}).length
+  };
+}
+function slug(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"");}
+$("#finBtn").addEventListener("click",function(){
+  var sc=scores(), n=nome.value.trim(), r=ra.value.trim(), out=[];
+  var hr="=".repeat(72);
+  out.push(hr,"SENAI · INTEGRAÇÃO E ENTREGA CONTÍNUA – DEVOPS · 2º ADS","AULA 06 · Jenkins: CI/CD, Pipeline como Código, Docker e Azure",hr);
+  out.push("Aluno: "+n,"RA: "+r,"Gerado em: "+new Date().toLocaleString("pt-BR"),"");
+  out.push("RESUMO","  Exercício guiado ....... "+sc.dg+"/10","  Sequência .............. "+(seqOk?"correta":"com erros")+" ("+seqTries+" tentativa(s))","  Quiz ................... "+sc.qz+"/12","");
+  out.push(hr,"09 · EXERCÍCIO GUIADO",hr);
+  DG.forEach(function(it,i){out.push((i+1)+". "+plain(it.t),"   Resposta: "+DGOPTS[dgAns[i]]+(dgAns[i]===it.a?"  [correta]":"  [incorreta · esperado: "+DGOPTS[it.a]+"]"));});
+  out.push("",hr,"10 · SEQUÊNCIA (ordem final do aluno)",hr);
+  seqOrder.forEach(function(v,p){out.push(String(p+1).padStart(2,"0")+". "+SEQ[v]+(v===p?"":"  [fora do lugar]"));});
+  out.push("",hr,"11 · QUIZ",hr);
+  QZ.forEach(function(it,i){out.push("Q"+(i+1)+". "+it.q,"   Resposta: "+L[qzAns[i]]+") "+it.o[qzAns[i]]+(qzAns[i]===it.a?"  [correta]":"  [incorreta · esperado: "+L[it.a]+"]"));});
+  out.push("",hr,"12 · DISSERTATIVAS",hr);
+  DISC.forEach(function(it,i){var v=$("#disc"+i).value.trim();out.push("D"+(i+1)+". "+it.q,"("+words(v)+" palavras)",v,"");});
+  out.push(hr,"13 · PRÁTICA SAP1-DEVOPS · CARPARTS · PLANO DE ENTREGA",hr);
+  PRAT.forEach(function(it,i){var v=$("#prat"+i).value.trim();out.push(it.id+" · "+it.t+" (peso "+it.w+"%)","("+words(v)+" palavras)",v,"");});
+  out.push(hr,"Fim do relatório.");
+  var blob=new Blob([out.join("\r\n")],{type:"text/plain;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="DevOps_Aula06_Jenkins_"+slug(r)+"_"+slug(n)+".txt";
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+  $("#finMsg").textContent="Relatório gerado: "+a.download;
+});
+
+renderDG(); shuffleSeq(); renderQZ(); updFin(); onScroll();
+})();
+
+</script>
+</body>
+</html>

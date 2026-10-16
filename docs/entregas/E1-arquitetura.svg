@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+<rect width="900" height="460" fill="#fff"/>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#333"/></marker></defs>
+<g fill="#fff" stroke="#333" stroke-width="1.5">
+<rect x="20" y="30" width="120" height="50" rx="6"/><rect x="20" y="150" width="120" height="50" rx="6"/>
+<rect x="190" y="20" width="450" height="400" rx="10" stroke-dasharray="6 4" fill="#f6f3ec"/>
+<rect x="280" y="50" width="270" height="95" rx="6" fill="#e8f0fb"/>
+<rect x="215" y="230" width="200" height="110" rx="6" fill="#e5f3ea"/>
+<rect x="430" y="230" width="190" height="110" rx="6" fill="#fdf1dc"/>
+<rect x="700" y="50" width="170" height="60" rx="6" fill="#efe8fa"/>
+<rect x="700" y="170" width="170" height="60" rx="6" fill="#efe8fa"/>
+<rect x="700" y="290" width="170" height="60" rx="6" fill="#efe8fa"/>
+</g>
+<g fill="#16161a">
+<text x="80" y="60" text-anchor="middle">Desenvolvedor</text><text x="80" y="180" text-anchor="middle">GitHub</text>
+<text x="200" y="40" font-weight="700">On-premises (rede da Carparts)</text>
+<text x="415" y="75" text-anchor="middle" font-weight="700">Controller Jenkins (Docker)</text>
+<text x="415" y="95" text-anchor="middle">LTS jdk21 · 0 executores no nó interno</text>
+<text x="415" y="115" text-anchor="middle">8080 web (localhost/VPN) · 50000 agents</text>
+<text x="315" y="255" text-anchor="middle" font-weight="700">Agent Linux</text>
+<text x="315" y="275" text-anchor="middle">Ubuntu 24.04 · Docker · Azure CLI</text>
+<text x="315" y="295" text-anchor="middle">rótulos: linux docker azure-cli</text><text x="315" y="315" text-anchor="middle">2 executores</text>
+<text x="525" y="255" text-anchor="middle" font-weight="700">Agent Windows</text>
+<text x="525" y="275" text-anchor="middle">Windows 11 + WSL 2</text><text x="525" y="295" text-anchor="middle">rótulo: windows</text><text x="525" y="315" text-anchor="middle">1 executor</text>
+<text x="785" y="85" text-anchor="middle">Azure Container Registry</text>
+<text x="785" y="205" text-anchor="middle">App Service homologação</text>
+<text x="785" y="325" text-anchor="middle">App Service produção</text>
+<text x="80" y="115" text-anchor="middle" font-size="11">push / PR</text>
+<text x="200" y="440" font-size="11">Produção só recebe a mesma imagem após aprovação (input).</text>
+</g>
+<g stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#a)">
+<path d="M80 80V150"/><path d="M140 175H210V120H280"/><path d="M350 145V230"/><path d="M480 145V230"/>
+<path d="M415 335V380H650V80H700" marker-end="url(#a)"/><path d="M415 380H650V200H700" marker-end="url(#a)"/><path d="M415 380H650V320H700" marker-end="url(#a)"/>
+</g>
+<text x="215" y="165" font-size="11" fill="#333">webhook</text>
+</svg>

@@ -1,0 +1,134 @@
+========================================================================
+SENAI · INTEGRAÇÃO E ENTREGA CONTÍNUA – DEVOPS · 2º ADS
+AULA 06 · Jenkins: CI/CD, Pipeline como Código, Docker e Azure
+========================================================================
+Aluno: Davi Ferreira Da Cunha
+RA: 26179855
+Gerado em: 15/10/2026, 22:38:33
+
+RESUMO
+  Exercício guiado ....... 10/10
+  Sequência .............. correta (1 tentativa(s))
+  Quiz ................... 12/12
+
+========================================================================
+09 · EXERCÍCIO GUIADO
+========================================================================
+1. Decide quando e onde cada job vai rodar, mantém a fila de builds e serve a interface web.
+   Resposta: Controller  [correta]
+2. Processo Java leve conectado ao servidor que executa npm test numa máquina Ubuntu 24.04 com Docker.
+   Resposta: Agent / nó  [correta]
+3. Arquivo versionado no Git com os stages Build, Test e Deploy do portal B2B.
+   Resposta: Jenkinsfile  [correta]
+4. Pipeline Graph View, que desenha os stages e seus status na interface.
+   Resposta: Plugin  [correta]
+5. Deve ficar com 0 executores por motivos de segurança, desempenho e escalabilidade.
+   Resposta: Controller  [correta]
+6. Bloco post { failure { mail ... } } que avisa a equipe quando o build quebra.
+   Resposta: Jenkinsfile  [correta]
+7. Estação Windows 11 conectada ao servidor pela porta 50000 para compilar o módulo .NET.
+   Resposta: Agent / nó  [correta]
+8. Docker Pipeline, que habilita agent { docker { image ... } } e docker.withRegistry.
+   Resposta: Plugin  [correta]
+9. Diretório JENKINS_HOME com a configuração dos jobs, credenciais criptografadas e histórico.
+   Resposta: Controller  [correta]
+10. input message: 'Publicar em produção?' antes do stage de deploy.
+   Resposta: Jenkinsfile  [correta]
+
+========================================================================
+10 · SEQUÊNCIA (ordem final do aluno)
+========================================================================
+01. Desenvolvedor faz push da branch e abre um pull request no GitHub
+02. Webhook do GitHub notifica o Jenkins em /github-webhook/
+03. Multibranch Pipeline detecta a mudança e o controller agenda o build num agent
+04. Agent faz checkout do código e lê o Jenkinsfile
+05. Stage de qualidade: npm ci, lint e testes publicados com junit
+06. Build da imagem Docker com a tag do número do build
+07. Push da imagem para o Azure Container Registry
+08. Deploy em homologação via Azure CLI e smoke test no /health
+09. Aprovação registrada (input) e promoção da mesma imagem para produção
+
+========================================================================
+11 · QUIZ
+========================================================================
+Q1. Por que o projeto Hudson passou a se chamar Jenkins em 2011?
+   Resposta: B) Por uma disputa com a Oracle sobre a marca “Hudson” e o controle da infraestrutura do projeto  [correta]
+Q2. Qual versão de Java é exigida pela LTS 2.568.3 do Jenkins?
+   Resposta: C) Java 21 ou 25  [correta]
+Q3. Qual afirmação descreve Entrega Contínua (e não Implantação Contínua)?
+   Resposta: A) O software fica sempre pronto para produção, e a publicação é uma decisão de negócio  [correta]
+Q4. Qual recurso descreve a configuração do controller Jenkins inteiro num arquivo YAML?
+   Resposta: D) Jenkins Configuration as Code (JCasC), apontado por CASC_JENKINS_CONFIG  [correta]
+Q5. Como fazer um stage declarativo rodar apenas na branch main?
+   Resposta: A) when { branch 'main' }  [correta]
+Q6. Por que se recomenda configurar 0 executores no nó interno (built-in node)?
+   Resposta: C) Por segurança, desempenho e escalabilidade: builds no controller acessam o JENKINS_HOME e disputam recursos  [correta]
+Q7. Qual tipo de item cria automaticamente um pipeline para cada branch e pull request que tenha Jenkinsfile?
+   Resposta: D) Multibranch Pipeline  [correta]
+Q8. No tutorial oficial de instalação em Docker, qual é o papel do contêiner docker:dind?
+   Resposta: B) Executar um daemon Docker isolado, acessado via TLS, para os comandos Docker dos pipelines  [correta]
+Q9. Após 29/02/2024, qual é a recomendação da Microsoft para integrar o Jenkins aos serviços Azure?
+   Resposta: A) Usar a Azure CLI nos passos do pipeline  [correta]
+Q10. Onde gerar trechos de código de steps compatíveis com os plugins instalados no seu Jenkins?
+   Resposta: C) No Snippet Generator, em JENKINS_URL/pipeline-syntax  [correta]
+Q11. Por que usar aspas simples em sh '... $AZURE_CLIENT_SECRET ...' ao lidar com segredos?
+   Resposta: D) Para que o shell expanda a variável e o Groovy não interpole o segredo na linha de comando e no log  [correta]
+Q12. O princípio “construa uma vez, implante muitas” significa que:
+   Resposta: B) O mesmo artefato (por exemplo, a imagem carparts-api:57) é promovido de homologação para produção  [correta]
+
+========================================================================
+12 · DISSERTATIVAS
+========================================================================
+D1. Com base na história do Hudson e do Jenkins, explique por que a governança de um projeto open source importa para uma empresa que vai depender dele, como a Carparts.
+(118 palavras)
+O Hudson nasceu em 2004 dentro da Sun, criado por um programador cansado de ver o build quebrar. Quando a Oracle comprou a Sun, surgiu uma briga pelo controle da marca e da infraestrutura do projeto, e em 2011 a comunidade decidiu migrar para o nome Jenkins. O Hudson foi perdendo força até ser descontinuado. Isso mostra que um projeto open source só é confiável enquanto tiver uma comunidade ativa por trás — não basta o código existir. Por isso, antes de adotar uma ferramenta como o Jenkins, a Carparts deveria olhar quem mantém o projeto, com que frequência ele recebe atualizações e se está sob uma fundação neutra, para não depender de algo que pode ser abandonado.
+
+D2. Diferencie Integração Contínua, Entrega Contínua e Implantação Contínua. Qual delas a Carparts deve adotar primeiro, considerando a exigência de aprovação registrada das montadoras?
+(97 palavras)
+Integração Contínua é integrar o código ao repositório principal com frequência, sempre validado por testes automáticos. Entrega Contínua vai um passo além: o software fica pronto para ir pra produção a qualquer momento, mas alguém decide quando publicar. Implantação Contínua tira esse “alguém”: tudo que passa nos testes já vai direto pra produção, sem aprovação manual. Como as montadoras exigem saber quem aprovou cada publicação, a Carparts deveria adotar primeiro CI e depois Entrega Contínua, com uma etapa de aprovação manual no pipeline. Implantação Contínua pura não funcionaria aqui, porque elimina exatamente o controle que estão pedindo.
+
+D3. Descreva a arquitetura controller/agents do Jenkins e justifique por que o nó interno deve ter 0 executores. Onde você colocaria os agents Windows e Linux da Carparts?
+(114 palavras)
+O controller é o cérebro do Jenkins: decide quando e onde cada build roda, guarda credenciais, histórico e configuração. Os agents são as máquinas ou contêineres que realmente executam as tarefas, e os executores são as “vagas” de trabalho dentro de cada agent. O nó interno do controller deve ficar com 0 executores porque rodar builds ali expõe dados sensíveis e disputa recursos com o próprio serviço que está coordenando tudo. Para a Carparts, faz sentido ter um agent Linux com Docker pra rodar a API e gerar as imagens, um agent Windows pra partes que dependem desse sistema, e agents temporários na Azure pra absorver picos de demanda sem gastar além do orçamento.
+
+D4. Compare instalar o Jenkins via MSI no Windows, via pacote apt no Ubuntu e via contêiner Docker para o laboratório da turma. Aponte vantagens e riscos de cada opção.
+(108 palavras)
+Instalar via MSI no Windows é familiar pra quem já usa o sistema, mas exige configurar Java e conta de serviço manualmente, e é mais chato de desfazer depois. Instalar via apt no Ubuntu se integra bem ao systemd e facilita atualizações, mas também depende da versão certa do Java e de manter a chave do repositório atualizada. Já a instalação via Docker é a mais prática pra laboratório: é descartável, a versão fica fixada na tag da imagem, e atualizar é só trocar essa tag. O cuidado principal é não usar bind mount com permissão errada e nunca montar o socket do Docker do host sem necessidade.
+
+D5. Explique o Jenkinsfile de CI/CD da seção 06: o papel de agent none no topo, de when, do input fora de um agent e do bloco post. O que aconteceria se o input estivesse dentro de um stage com agent?
+(123 palavras)
+Usar agent none no topo do pipeline permite que cada stage escolha seu próprio agent — por exemplo, um contêiner Node pra rodar os testes e outro agent pra montar a imagem Docker. A diretiva when { branch 'main' } garante que publicação e deploy só aconteçam na branch principal, enquanto PRs e outras branches passam só pela parte de integração. O input fica fora de um bloco com agent justamente pra não travar um executor enquanto espera alguém aprovar a publicação. Já o post trata o que acontece depois do pipeline, avisando a equipe em caso de sucesso ou falha. Se o input estivesse dentro de um stage com agent, esse executor ficaria preso até alguém aprovar, travando outros builds na fila.
+
+D6. Com a aposentadoria dos plugins Azure em 2024, como integrar Jenkins e Azure com segurança? Discuta service principal × identidade gerenciada, escopo mínimo e o risco de abrir a porta 8080.
+(117 palavras)
+Desde que a Microsoft aposentou os plugins oficiais do Jenkins pra Azure em 2024, a recomendação passou a ser usar a Azure CLI direto nos steps do pipeline. Pra autenticar, dá pra usar um service principal com permissão limitada só ao grupo de recursos da aplicação, guardado como credencial no Jenkins — ou, se o Jenkins estiver rodando dentro da própria Azure, usar identidade gerenciada, que elimina senha. Em qualquer um dos dois casos, o segredo nunca deve aparecer no Jenkinsfile. Deixar a porta 8080 aberta pra qualquer IP na internet é um risco grande, porque expõe a tela de login a ataques; o ideal é usar túnel SSH, Bastion ou um proxy HTTPS com acesso restrito.
+
+========================================================================
+13 · PRÁTICA SAP1-DEVOPS · CARPARTS · PLANO DE ENTREGA
+========================================================================
+E1 · Arquitetura Jenkins da Carparts (peso 15%)
+(96 palavras)
+Vou desenhar um diagrama mostrando o controller rodando em contêiner Docker, com 0 executores no nó interno, e os agents: um Linux (Ubuntu 24.04 com Docker, rótulo linux && docker) pra rodar testes e construir imagens, e um Windows 11 pra componentes que dependem desse sistema. Vou indicar as portas usadas (8080 web, 50000 agents) e justificar por que optei por rodar o controller em Docker local em vez de VM ou AKS, considerando o tamanho da equipe e o orçamento. Evidência: print do diagrama e do painel de nodes do Jenkins mostrando os agents conectados.
+
+E2 · Controller reprodutível (Dockerfile + plugins + JCasC) (peso 15%)
+(82 palavras)
+Vou criar um Dockerfile baseado na imagem oficial do Jenkins, um plugins.txt com os plugins necessários (Git, Docker Pipeline, Multibranch, Matrix Authorization) e um casc.yaml configurando o controller: 0 executores no nó interno, autorização por matriz e sem acesso anônimo. Depois vou subir o container com docker build e docker run pra provar que a configuração é reprodutível, sem precisar passar pelo assistente manual. Evidência: os três arquivos versionados no repositório e um print do Jenkins já configurado automaticamente na primeira subida.
+
+E3 · Jenkinsfile de CI/CD (peso 25%)
+(87 palavras)
+Vou escrever um Jenkinsfile declarativo com agent none no topo, e stages de qualidade (lint e testes com npm), build da imagem Docker, publicação condicionada à branch main, deploy em homologação, uma etapa de aprovação manual com input fora de agent, e deploy em produção promovendo a mesma imagem. Vou usar post pra notificar em caso de falha e publicar os resultados dos testes com junit. Evidência: o arquivo Jenkinsfile no repositório e um print da execução completa do pipeline no Jenkins, mostrando todos os stages verdes.
+
+E4 · Integração com a Azure (peso 20%)
+(87 palavras)
+Vou criar um service principal com az ad sp create-for-rbac, limitando o escopo só ao grupo de recursos da aplicação, e cadastrar essas credenciais no Jenkins (usuário/senha e tenant separados). No pipeline, vou usar a Azure CLI pra fazer login, construir a imagem no Azure Container Registry e atualizar o App Service de homologação, seguido de um smoke test no endpoint de saúde. Evidência: prints do pipeline executando o deploy, do App Service atualizado na Azure e da credencial cadastrada no Jenkins (sem expor os valores sensíveis).
+
+E5 · Multibranch + webhook (peso 10%)
+(74 palavras)
+Vou configurar um item do tipo Multibranch Pipeline no Jenkins apontando pro repositório no GitHub, e cadastrar um webhook no GitHub apontando pra /github-webhook/ do Jenkins, disparando em eventos de push e pull request. Vou proteger a branch main exigindo que o check do Jenkins passe antes de permitir merge. Evidência: print do Jenkins mostrando um job criado automaticamente por branch/PR, do webhook configurado no GitHub e da regra de proteção de branch ativa.
+
+E6 · Métricas e plano de melhoria (peso 15%)
+(99 palavras)
+Vou rodar o pipeline pelo menos 10 vezes e coletar, a partir do histórico do Jenkins, o lead time médio, a frequência de implantação e a taxa de falhas, comparando com a linha de base atual de 11 dias. Com base nesses números, vou montar um plano com ações concretas pra reduzir o lead time até 2 dias (como paralelizar testes e automatizar a homologação) e uma estimativa de custo mensal dos recursos usados na Azure, confirmando que fica dentro dos US$ 150. Evidência: planilha ou tabela com os dados das execuções e o texto do plano de melhoria.
+
+========================================================================
+Fim do relatório.
